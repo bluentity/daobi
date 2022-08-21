@@ -134,15 +134,6 @@ contract DaobiChancellorsSeal is Initializable, ERC721Upgradeable, ERC721URIStor
         super._burn(tokenId);
     }
 
-    /*function tokenURI(uint256 tokenId)
-        public
-        view
-        override(ERC721Upgradeable, ERC721URIStorageUpgradeable)
-        returns (string memory)
-    {
-        return super.tokenURI(tokenId);
-    }*/
-
     function supportsInterface(bytes4 interfaceId)
         public
         view

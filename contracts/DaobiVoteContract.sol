@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.4;
+pragma solidity ^0.8.10;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721URIStorageUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
-contract DaobiVoteContract is Initializable, ERC20Upgradeable, PausableUpgradeable, AccessControlUpgradeable, UUPSUpgradeable {
+contract DaobiVoteContract is Initializable, ERC721Upgradeable, ERC721URIStorageUpgradeable, PausableUpgradeable, AccessControlUpgradeable, UUPSUpgradeable {
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
     bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
+    bytes32 public constant NFT_MANAGER = keccak256("NFT_MANAGER");
 
     //required information for each voter
     struct Voter {        
@@ -24,7 +26,8 @@ contract DaobiVoteContract is Initializable, ERC20Upgradeable, PausableUpgradeab
     //maps addresses to their Voter info
     mapping (address => Voter) public voterRegistry;
 
-
+    //where the NFT metadata URI is located.  This should be a URL pointing to a JSON file in accordance with the OpenSea format (https://docs.opensea.io/docs/metadata-standards)
+    string public URIaddr;
 
     //Basic idea: Once someone is verified, they are minted a voting token.  This allows them to (register to) vote, and qualifies them to receive votes.
     //They can vote for anyone, including themselves or 0x0 (i.e., abstain)
@@ -42,13 +45,14 @@ contract DaobiVoteContract is Initializable, ERC20Upgradeable, PausableUpgradeab
     event Voted(address voter, address votee);
     event Burnt(address burnee);
     event SelfBurnt(address burner);
+    event NFTRetarget(string newURI);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
     
 
     function initialize() initializer public {
-        __ERC20_init("DaobiVotingToken", "DBvt");
+        __ERC721_init("Daobi Voting Token", "DBvt");
         __Pausable_init();
         __AccessControl_init();
         __UUPSUpgradeable_init();
@@ -58,7 +62,8 @@ contract DaobiVoteContract is Initializable, ERC20Upgradeable, PausableUpgradeab
         _grantRole(MINTER_ROLE, msg.sender);
         _grantRole(UPGRADER_ROLE, msg.sender);
         _grantRole(BURNER_ROLE, msg.sender);
-    }
+        _grantRole(NFT_MANAGER, msg.sender);
+    }    
 
     function pause() public onlyRole(PAUSER_ROLE) {
         _pause();
@@ -68,9 +73,20 @@ contract DaobiVoteContract is Initializable, ERC20Upgradeable, PausableUpgradeab
         _unpause();
     }
 
+    function setURI(string memory newURI) public whenNotPaused onlyRole(NFT_MANAGER) {
+        URIaddr = newURI;
+        emit NFTRetarget(newURI);
+    }
+
+    function tokenURI(uint256 tokenId) public view virtual override(ERC721Upgradeable, ERC721URIStorageUpgradeable) returns (string memory) {
+        require(_exists(tokenId), "ERC721URIStorage: URI query for nonexistent token");
+        return URIaddr;
+    }
+
     function mint(address to) public whenNotPaused onlyRole(MINTER_ROLE) {
         require(balanceOf(to) == 0, "DaobiVote: Account already has a token!");
-        _mint(to, 1);
+        _safeMint(to, uint160(to));//tokenID = address
+        _setTokenURI(uint160(to),URIaddr);
         emit NewToken(to);
     }
 
@@ -88,13 +104,8 @@ contract DaobiVoteContract is Initializable, ERC20Upgradeable, PausableUpgradeab
         override
     {}
 
-    //since users should only ever have 1 DBvt, don't use decimals
-    function decimals() public view virtual override returns (uint8) {
-        return 0;
-    }
-
-    //disable token transfers by making any call to transfer auto-revert
-    function _transfer(address from, address to, uint256 amount) internal override pure {  
+    //disable token transfers by making any call to transfer function auto-revert
+    function _transfer(address from, address to, uint256 tokenId) internal override pure {  
         require(1==0, "DaobiVote: Tokens Are Not Transferrable!");
     }
 
@@ -125,7 +136,7 @@ contract DaobiVoteContract is Initializable, ERC20Upgradeable, PausableUpgradeab
     function vote(address _voteFor) whenNotPaused public {
         require(balanceOf(msg.sender) > 0, "DaobiVote: You don't have a token!");
         require(voterRegistry[msg.sender].serving == true, "DaobiVote: You're not registered!");
-        require(balanceOf(_voteFor) > 0 || _voteFor == 0x0000000000000000000000000000000000000000, "DaobiVote: Invalid candidate!");
+        require(_voteFor == 0x0000000000000000000000000000000000000000 || balanceOf(_voteFor) > 0, "DaobiVote: Invalid candidate!");
 
         voterRegistry[voterRegistry[msg.sender].votedFor].votesAccrued--;
         voterRegistry[msg.sender].votedFor = _voteFor;
@@ -147,7 +158,7 @@ contract DaobiVoteContract is Initializable, ERC20Upgradeable, PausableUpgradeab
         }        
 
         //I wanted to set votesAccrued to zero but this was not feasible
-        _burn(_account,balanceOf(_account));
+        _burn(uint160(_account));
         emit Burnt(_account);
     }
 
@@ -161,7 +172,7 @@ contract DaobiVoteContract is Initializable, ERC20Upgradeable, PausableUpgradeab
             voterRegistry[msg.sender].serving = false;
         }
 
-        _burn(msg.sender,balanceOf(msg.sender));
+        _burn(uint160(msg.sender));
         emit SelfBurnt(msg.sender);
     }
 
@@ -176,5 +187,33 @@ contract DaobiVoteContract is Initializable, ERC20Upgradeable, PausableUpgradeab
 
     function checkStatus(address _voter) public view returns (bool) {
         return voterRegistry[_voter].serving;
+    }
+
+
+    //below are required by ERC721 standard
+
+    function _burn(uint256 tokenId)
+        internal
+        override(ERC721Upgradeable, ERC721URIStorageUpgradeable)
+    {
+        super._burn(tokenId);
+    }
+
+    /*function tokenURI(uint256 tokenId)
+        public
+        view
+        override(ERC721Upgradeable, ERC721URIStorageUpgradeable)
+        returns (string memory)
+    {
+        return super.tokenURI(tokenId);
+    }*/
+
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        override(ERC721Upgradeable, AccessControlUpgradeable)
+        returns (bool)
+    {
+        return super.supportsInterface(interfaceId);
     }
 }

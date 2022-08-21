@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.4;
+pragma solidity ^0.8.10;
+pragma abicoder v2;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol";
@@ -7,11 +8,15 @@ import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+
 import "./DaobiVoteContract.sol";
 import "./DaobiChancellorsSeal.sol";
 
+import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
+import "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
+
 /// @custom:security-contact jennifer.dodgson@gmail.com
-contract DAObiWithVotingWithSeal is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable, PausableUpgradeable, AccessControlUpgradeable, UUPSUpgradeable {
+contract DAObiContract3 is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable, PausableUpgradeable, AccessControlUpgradeable, UUPSUpgradeable {
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
@@ -32,10 +37,20 @@ contract DAObiWithVotingWithSeal is Initializable, ERC20Upgradeable, ERC20Burnab
     event DaobiMinted(uint256 amount);
 
     //signals that the Chancellor's seal contract has been retargeted.  
-    //The contract itself may internally; emits will be emitted from that address
+    //The contract itself may send events internally; emits will be emitted from that address
     event SealContractChange(address _newSealAddr);
 
+    //events and variables related to Uniswap/DAO integration
+    address public DAOvault = 0x9f216b3644082530E6568755768786123DD56367;
+    ISwapRouter public constant uniswapRouter = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564); //swaprouter02
+    address private constant daobiToken = 0xD79dA24D607FF594233F02126771dD35938F922b; //address of Token A, RinkDB
+    address private constant chainToken = 0xc778417E063141139Fce010982780140Aa0cD5Ab; //address of Token B, RinkWETH
+    uint24 swapFee = 3000; //uniswap pair swap fee, 3000 is standard (.3%)
+    event DAORetargeted(address _newDAO);
+
+
     /// @custom:oz-upgrades-unsafe-allow constructor
+
     constructor() initializer {}
 
     function initialize() initializer public {
@@ -46,9 +61,9 @@ contract DAObiWithVotingWithSeal is Initializable, ERC20Upgradeable, ERC20Burnab
         __UUPSUpgradeable_init();
 
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(PAUSER_ROLE, msg.sender);
-        _mint(msg.sender, 1000 * 10 ** decimals());
-        _grantRole(MINTER_ROLE, msg.sender);
+        _grantRole(PAUSER_ROLE, msg.sender); //PAUSER_ROLE is the contract "moderator"
+        //_mint(msg.sender, 1000 * 10 ** decimals()); for testing, no longer needed
+        _grantRole(MINTER_ROLE, msg.sender); //MINTER_ROLE should be the chancellor
         _grantRole(UPGRADER_ROLE, msg.sender);
     }
 
@@ -75,9 +90,37 @@ contract DAObiWithVotingWithSeal is Initializable, ERC20Upgradeable, ERC20Burnab
         _unpause();
     }
 
-    function mint(address to, uint256 amount) public whenNotPaused onlyRole(MINTER_ROLE) {
-        _mint(to, amount);
+    function mint(uint256 amount) public payable whenNotPaused onlyRole(MINTER_ROLE) {
+        require(amount > 0, "Must pass non 0 DB amount");    
+
+        _mint(address(this), amount); //mint tokens into contract
+        _mint(DAOvault, amount / 20); //mint 5% extra tokens into DAO vault
+        
+        TransferHelper.safeApprove(daobiToken,address(uniswapRouter),amount); //approve uniswap transaction
+
+        ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams(
+            daobiToken, //input token
+            chainToken, //output token
+            swapFee,
+            DAOvault, //eth from transaction sent to DAO
+            block.timestamp + 15, //execute trade immediately
+            amount,
+            1, //trade will execute even if only 1 wei is received back
+            0 //sqrtPriceLimitX96
+        );
+
+        uniswapRouter.exactInputSingle{ value: msg.value }(params);
+
         emit DaobiMinted(amount);
+    }
+
+    function retargetDAO(address _newVault) public whenNotPaused onlyRole(PAUSER_ROLE){
+        DAOvault = _newVault;
+        emit DAORetargeted(_newVault);
+    }
+
+    function setSwapFee(uint24 _swapFee) public whenNotPaused onlyRole(PAUSER_ROLE){
+        swapFee = _swapFee;
     }
 
     function _beforeTokenTransfer(address from, address to, uint256 amount)
@@ -141,5 +184,7 @@ contract DAObiWithVotingWithSeal is Initializable, ERC20Upgradeable, ERC20Burnab
         onlyRole(UPGRADER_ROLE)
         override
     {}
+
+    receive() payable external {}
 
 }

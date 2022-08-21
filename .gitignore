@@ -18,3 +18,10 @@ package-lock*
 
 #test contracts
 archive
+contracts/DBswap_rinkeby.sol
+
+#duplicated contracts
+contracts/UniswapV3Factory.sol
+contracts/NoDelegateCall.sol
+contracts/UniswapV3Pool.sol
+contracts/UniswapV3PoolDeployer.sol
