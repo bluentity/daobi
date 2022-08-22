@@ -30,6 +30,15 @@ DaobiChancellorSeal is a modified ERC-721.  It is non-transferable except by a s
 5. Execute DAObiContract3.retargetVoting() with the address of DaobiVoteContract as an argument.
 6. Deploy DaobiChancellorsSeal.sol using the ethers.deployProxy(kind: 'uups') command
 7. Execute the DaobiChancellorsSeal.setURI() function with the seal NFT URI address as the argument.
-8. Execute the DaobiChancellorsSeal.targetDaobiContractd function with the address of DAObiContract3 as the argument
-9. Unpause the DAObiContract3 by executing its unpause() function.
-10. Use the DaobiVoteContract.mint() function to add voters
+8. Execute the DaobiChancellorsSeal.targetDaobiContractd function with the address of DAObiContract3 as the argument.
+9. Execute the DAObiContract3.retargetSeal() function with the Daobi Chancellor Seal contract address as the argument.
+10. Unpause the DAObiContract3 by executing its unpause() function.
+
+Once all this is done, use the DaobiVoteContract.mint() function to add voters
+
+# Rules
+
+1. Holders of a Daobi Vote Token (DBvt) who have executed the register() function of the Daobi Vote Contract may vote for other registered DBvt holders, by executing the vote() command of that contract.
+2. A DBvt holder may execute the makeClaim() function of the Daobi token contract.  If his vote total EXCEEDS the current Chancellor, he becomes the new Chancellor.
+3. The Chancellor may mint DAObi tokens (DB) into the liquidity pool or claim their salary as described above.
+4. While the Chancellor cannot directly abdicate, he may de-register by executing the recluse() function of the Daobi Vote Contract.  This effectively sets his vote total to zero, meaning anyone with at least one vote can successfully claim chancellorship from the Daobi Token Contract.
