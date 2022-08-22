@@ -1,15 +1,35 @@
-# Basic Sample Hardhat Project
+#DAObi Contract Repository
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, a sample script that deploys that contract, and an example of a task implementation, which simply lists the available accounts.
+# Overview
 
-Try running some of the following tasks:
+The current DAObi token contract is DAObiContract2.sol.  This is a basic ERC-20 contract.
 
-```shell
-npx hardhat accounts
-npx hardhat compile
-npx hardhat clean
-npx hardhat test
-npx hardhat node
-node scripts/sample-script.js
-npx hardhat help
-```
+The proposed feature upgrade consists of three contracts: DAObiContract3, DaobiVoteContract, and DaobiChancellorsSeal.  
+
+DaobiVoteContract is a modified ERC-721 contract whose tokens (Daobi Voting Token, DBvt) enable a given wallet to cast votes for other token holders.  A wallet designated as a MINTER_ROLE can issue new voting tokens, while the BURNER_ROLE can destroy them.  Users can also burn their own tokens.  The tokens are non-transferable, and a given wallet can only hold a single token.  
+
+In order to vote, a token holder must execute the register() function in the DaobiVoteContract, then execute the vote() function for their desired candidate.  A token holder can un-register by executing the recluse() function, but can re-register at any time as long as they do not burn their DBvt.  
+
+DAObiContract3 is an upgrade (UUPS) of DAObiContract2.  It makes two major changes: it allows for wallets holding a Daobi Vote Token to make claims to the chancellorship (MINTER_ROLE) and it allows successful claimants to mint new Daobi tokens.
+
+The mint() command is NOT the standard ERC-20 mint function.  Minting a given token amount does the following:
+1. The specified amount of new Daobi tokens are created and assigned to the contract.
+2. These tokens are naively traded for the native chain token (MATIC on Polygon) with the proceeds of the trade going to the DAObi DAO vault
+3. 5% of this value of new Daobi tokens are also created and sent to the DAObi DAO vault.
+
+Additionally, the chancellor can claim a salary in newly minted Daobi tokens every 24 hours (86400 seconds).  Reassigning the MINTER_ROLE does not alter the salary claim timer in any way.  The amount and interval of the salary is adjustable. [needs implementation]
+
+DaobiChancellorSeal is a modified ERC-721.  It is non-transferable except by a specified DAOBI_CONTRACT address, which...should be the address of the Daobi token contract.  When a wallet makes a successful claim for the Chancellorship, the DAObi contract transfers the NFT Seal.
+
+# Deployment Instructions
+
+1. Upload files and URIs for the Voting Token and Chancellor Seal NFTs.
+2. Deploy DaobiVoteContract.sol using the ethers.deployProxy(kind: 'uups') command
+3. Execute the setURI() command of the deployed DaobiVoteContract with the address of the voting token NFT as the argument.
+4. Deploy DAObiContract3.sol using the ethers.upgradeProxy(kind: 'uups') command to upgrade the existing token contract.
+5. Execute DAObiContract3.retargetVoting() with the address of DaobiVoteContract as an argument.
+6. Deploy DaobiChancellorsSeal.sol using the ethers.deployProxy(kind: 'uups') command
+7. Execute the DaobiChancellorsSeal.setURI() function with the seal NFT URI address as the argument.
+8. Execute the DaobiChancellorsSeal.targetDaobiContractd function with the address of DAObiContract3 as the argument
+9. Unpause the DAObiContract3 by executing its unpause() function.
+10. Use the DaobiVoteContract.mint() function to add voters
