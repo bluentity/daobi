@@ -10,14 +10,14 @@ DaobiVoteContract is a modified ERC-721 contract whose tokens (Daobi Voting Toke
 
 In order to vote, a token holder must execute the register() function in the DaobiVoteContract, then execute the vote() function for their desired candidate.  A token holder can un-register by executing the recluse() function, but can re-register at any time as long as they do not burn their DBvt.  
 
-DAObiContract3 is an upgrade (UUPS) of DAObiContract2.  It makes two major changes: it allows for wallets holding a Daobi Vote Token to make claims to the chancellorship (MINTER_ROLE) and it allows successful claimants to mint new Daobi tokens.
+DAObiContract3 is an upgrade (UUPS) of DAObiContract2.  It makes two major changes: it allows for wallets holding a Daobi Vote Token to make claims to the chancellorship (CHANCELLOR_ROLE) and it allows successful claimants to mint new Daobi tokens.
 
 The mint() command is NOT the standard ERC-20 mint function.  Minting a given token amount does the following:
 1. The specified amount of new Daobi tokens are created and assigned to the contract.
 2. These tokens are naively traded for the native chain token (MATIC on Polygon) with the proceeds of the trade going to the DAObi DAO vault
 3. 5% of this value of new Daobi tokens are also created and sent to the DAObi DAO vault.
 
-Additionally, the chancellor can claim a salary in newly minted Daobi tokens every 24 hours (86400 seconds).  Reassigning the MINTER_ROLE does not alter the salary claim timer in any way.  The amount and interval of the salary is adjustable.
+Additionally, the chancellor can claim a salary in newly minted Daobi tokens every 24 hours (86400 seconds).  This value is adjustable by the TREASURER_ROLE of the token contract.  Reassigning the CHANCELLOR_ROLE does not alter the salary claim timer in any way.  The amount and interval of the salary is adjustable.
 
 DaobiChancellorSeal is a modified ERC-721.  It is non-transferable except by a specified DAOBI_CONTRACT address, which...should be the address of the Daobi token contract.  When a wallet makes a successful claim for the Chancellorship, the DAObi contract transfers the NFT Seal.
 
