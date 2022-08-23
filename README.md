@@ -17,7 +17,7 @@ The mint() command is NOT the standard ERC-20 mint function.  Minting a given to
 2. These tokens are naively traded for the native chain token (MATIC on Polygon) with the proceeds of the trade going to the DAObi DAO vault
 3. 5% of this value of new Daobi tokens are also created and sent to the DAObi DAO vault.
 
-Additionally, the chancellor can claim a salary in newly minted Daobi tokens every 24 hours (86400 seconds).  Reassigning the MINTER_ROLE does not alter the salary claim timer in any way.  The amount and interval of the salary is adjustable. [needs implementation]
+Additionally, the chancellor can claim a salary in newly minted Daobi tokens every 24 hours (86400 seconds).  Reassigning the MINTER_ROLE does not alter the salary claim timer in any way.  The amount and interval of the salary is adjustable.
 
 DaobiChancellorSeal is a modified ERC-721.  It is non-transferable except by a specified DAOBI_CONTRACT address, which...should be the address of the Daobi token contract.  When a wallet makes a successful claim for the Chancellorship, the DAObi contract transfers the NFT Seal.
 

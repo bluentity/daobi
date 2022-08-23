@@ -30,7 +30,7 @@ contract DaobiChancellorsSeal is Initializable, ERC721Upgradeable, ERC721URIStor
     
 
     function initialize() initializer public {
-        __ERC721_init("Daobi Chancellor's Seal", "DAOBI SEAL");
+        __ERC721_init("DAObi Chancellor's Seal", "DAOBI SEAL");
         __Pausable_init();
         __AccessControl_init();
         __UUPSUpgradeable_init();

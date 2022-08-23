@@ -17,9 +17,9 @@ import "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 
 /// @custom:security-contact jennifer.dodgson@gmail.com
 contract DAObiContract3 is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable, PausableUpgradeable, AccessControlUpgradeable, UUPSUpgradeable {
-    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
-    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
-    bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
+    bytes32 public constant TREASURER_ROLE = keccak256("TREASURER_ROLE"); //controls contract admin functions
+    bytes32 public constant CHANCELLOR_ROLE = keccak256("CHANCELLOR_ROLE"); //the chancellor
+    bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE"); //the administrator (tho not same as ADMIN_ROLE)
 
     //additions to support on-chain election of chancellor: 
     address public chancellor; //the address of the current chancellor
@@ -48,49 +48,55 @@ contract DAObiContract3 is Initializable, ERC20Upgradeable, ERC20BurnableUpgrade
     uint24 swapFee = 3000; //uniswap pair swap fee, 3000 is standard (.3%)
     event DAORetargeted(address _newDAO);
 
+    //chancellor salary functionality
+    uint256 chancellorSalary = 1000 * 10 ** decimals();
+    uint256 salaryInterval = 86400;
+    uint256 lastSalaryClaim = 0; //last block timestamp at which chancellor salary was claimed.
+    event chancellorPaid(address _chancellor);
+
 
     /// @custom:oz-upgrades-unsafe-allow constructor
 
     constructor() initializer {}
 
     function initialize() initializer public {
-        __ERC20_init("DAObiContract2", "DBT");
+        __ERC20_init("DAObi", "DB");
         __ERC20Burnable_init();
         __Pausable_init();
         __AccessControl_init();
         __UUPSUpgradeable_init();
 
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(PAUSER_ROLE, msg.sender); //PAUSER_ROLE is the contract "moderator"
+        _grantRole(TREASURER_ROLE, msg.sender); //TREASURER_ROLE is the contract "moderator"
         //_mint(msg.sender, 1000 * 10 ** decimals()); for testing, no longer needed
-        _grantRole(MINTER_ROLE, msg.sender); //MINTER_ROLE should be the chancellor
+        _grantRole(CHANCELLOR_ROLE, msg.sender); //CHANCELLOR_ROLE should be the chancellor
         _grantRole(UPGRADER_ROLE, msg.sender);
     }
 
     //THIS FUNCTION MUST BE EXECUTED IMMEDIATELY AFTER UPGRADEPROXY() TO POINT TO THE VOTE CONTRACT
-    function retargetVoting(address _voteContract) public onlyRole(PAUSER_ROLE) {
+    function retargetVoting(address _voteContract) public onlyRole(TREASURER_ROLE) {
         //pauses the contract to prevent minting and claiming after deployment until unpaused        
         votingContract = _voteContract;
         emit VoteContractChange(_voteContract);
         pause();
     }
 
-    function retargetSeal(address _sealContract) public onlyRole(PAUSER_ROLE) {
+    function retargetSeal(address _sealContract) public onlyRole(TREASURER_ROLE) {
         //pauses the contract to prevent minting and claiming after deployment until unpaused        
         sealContract = _sealContract;
         emit SealContractChange(_sealContract);
         pause();
     }
 
-    function pause() public onlyRole(PAUSER_ROLE) {
+    function pause() public onlyRole(TREASURER_ROLE) {
         _pause();
     }
 
-    function unpause() public onlyRole(PAUSER_ROLE) {
+    function unpause() public onlyRole(TREASURER_ROLE) {
         _unpause();
     }
 
-    function mint(uint256 amount) public payable whenNotPaused onlyRole(MINTER_ROLE) {
+    function mint(uint256 amount) public payable whenNotPaused onlyRole(CHANCELLOR_ROLE) {
         require(amount > 0, "Must pass non 0 DB amount");    
 
         _mint(address(this), amount); //mint tokens into contract
@@ -114,12 +120,30 @@ contract DAObiContract3 is Initializable, ERC20Upgradeable, ERC20BurnableUpgrade
         emit DaobiMinted(amount);
     }
 
-    function retargetDAO(address _newVault) public whenNotPaused onlyRole(PAUSER_ROLE){
+    function claimChancellorSalary() public whenNotPaused onlyRole(CHANCELLOR_ROLE) {
+        require(block.timestamp > lastSalaryClaim + salaryInterval, "Not enough time has elapsed since last payment");
+
+        lastSalaryClaim = block.timestamp + 15;
+        _mint(msg.sender,chancellorSalary); //mint chancellor salary into chancellor's wallet
+
+        emit chancellorPaid(msg.sender);
+
+    }
+
+    function adjustSalaryInterval(uint _newInterval) public onlyRole(TREASURER_ROLE) {
+        salaryInterval = _newInterval;
+    }
+
+    function adjustSalaryAmount(uint _newSalary) public onlyRole(TREASURER_ROLE) {
+        chancellorSalary = _newSalary;
+    }
+
+    function retargetDAO(address _newVault) public whenNotPaused onlyRole(TREASURER_ROLE){
         DAOvault = _newVault;
         emit DAORetargeted(_newVault);
     }
 
-    function setSwapFee(uint24 _swapFee) public whenNotPaused onlyRole(PAUSER_ROLE){
+    function setSwapFee(uint24 _swapFee) public whenNotPaused onlyRole(TREASURER_ROLE){
         swapFee = _swapFee;
     }
 
@@ -172,9 +196,9 @@ contract DAObiContract3 is Initializable, ERC20Upgradeable, ERC20BurnableUpgrade
         seal.approve(address(this), 1);
         seal.safeTransferFrom(seal.ownerOf(1), _newChancellor, 1);
 
-        _revokeRole(MINTER_ROLE, chancellor);
+        _revokeRole(CHANCELLOR_ROLE, chancellor);
         chancellor = _newChancellor;
-        _grantRole(MINTER_ROLE, chancellor);
+        _grantRole(CHANCELLOR_ROLE, chancellor);
 
         emit NewChancellor(chancellor);
     }

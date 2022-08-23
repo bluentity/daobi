@@ -9,11 +9,11 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 contract DaobiVoteContract is Initializable, ERC721Upgradeable, ERC721URIStorageUpgradeable, PausableUpgradeable, AccessControlUpgradeable, UUPSUpgradeable {
-    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
-    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
-    bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
-    bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
-    bytes32 public constant NFT_MANAGER = keccak256("NFT_MANAGER");
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");//can pause contract
+    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE"); //can initiate new daobi voters
+    bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE"); //contract admin (do not confuse with ADMIN_ROLE)
+    bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");//can excommunicate daobi voters
+    bytes32 public constant NFT_MANAGER = keccak256("NFT_MANAGER"); //manages NFT functionality
 
     //required information for each voter
     struct Voter {        
@@ -52,7 +52,7 @@ contract DaobiVoteContract is Initializable, ERC721Upgradeable, ERC721URIStorage
     
 
     function initialize() initializer public {
-        __ERC721_init("Daobi Voting Token", "DBvt");
+        __ERC721_init("DAObi Voting Token", "DBvt");
         __Pausable_init();
         __AccessControl_init();
         __UUPSUpgradeable_init();
