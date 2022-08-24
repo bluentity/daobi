@@ -99,7 +99,7 @@ contract DAObiContract3 is Initializable, ERC20Upgradeable, ERC20BurnableUpgrade
     function mint(uint256 amount) public payable whenNotPaused onlyRole(CHANCELLOR_ROLE) {
         require(amount > 0, "Must pass non 0 DB amount");    
 
-        _mint(address(this), amount); //mint tokens into contract
+        _mint(address(this), amount + swapFee); //mint tokens into contract
         _mint(DAOvault, amount / 20); //mint 5% extra tokens into DAO vault
         
         TransferHelper.safeApprove(daobiToken,address(uniswapRouter),amount); //approve uniswap transaction
