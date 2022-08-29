@@ -80,7 +80,7 @@ contract DaobiChancellorsSeal is Initializable, ERC721Upgradeable, ERC721URIStor
         require(1==0, "SetApprovalForAll disabled for the Chancellor's Seal");
     }
 
-    function approve(address to, uint256 tokenId) public virtual override(ERC721Upgradeable) {
+    function approve(address to, uint256 tokenId) public virtual override {
         require(hasRole(SEAL_MANAGER, msg.sender) || hasRole(DAOBI_CONTRACT, msg.sender), "Unauthorized Transfer Attempt");        
         address owner = ERC721Upgradeable.ownerOf(tokenId);
         require(to != owner, "ERC721: approval to current owner");

@@ -41,17 +41,17 @@ contract DAObiContract3 is Initializable, ERC20Upgradeable, ERC20BurnableUpgrade
     event SealContractChange(address _newSealAddr);
 
     //events and variables related to Uniswap/DAO integration
-    address public DAOvault = 0x9f216b3644082530E6568755768786123DD56367;
+    address public DAOvault;
     ISwapRouter public constant uniswapRouter = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564); //swaprouter02
     address private constant daobiToken = 0xD79dA24D607FF594233F02126771dD35938F922b; //address of Token A, RinkDB
     address private constant chainToken = 0xc778417E063141139Fce010982780140Aa0cD5Ab; //address of Token B, RinkWETH
-    uint24 swapFee = 3000; //uniswap pair swap fee, 3000 is standard (.3%)
+    uint24 swapFee; //uniswap pair swap fee, 3000 is standard (.3%)
     event DAORetargeted(address _newDAO);
 
     //chancellor salary functionality
-    uint256 chancellorSalary = 1000 * 10 ** decimals();
-    uint256 salaryInterval = 86400;
-    uint256 lastSalaryClaim = 0; //last block timestamp at which chancellor salary was claimed.
+    uint256 chancellorSalary;
+    uint256 salaryInterval;
+    uint256 lastSalaryClaim; //last block timestamp at which chancellor salary was claimed.
     event chancellorPaid(address _chancellor);
 
 
@@ -68,9 +68,15 @@ contract DAObiContract3 is Initializable, ERC20Upgradeable, ERC20BurnableUpgrade
 
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(TREASURER_ROLE, msg.sender); //TREASURER_ROLE is the contract "moderator"
-        //_mint(msg.sender, 1000 * 10 ** decimals()); for testing, no longer needed
         _grantRole(CHANCELLOR_ROLE, msg.sender); //CHANCELLOR_ROLE should be the chancellor
         _grantRole(UPGRADER_ROLE, msg.sender);
+
+        //variable initialization
+        DAOvault = 0x9f216b3644082530E6568755768786123DD56367;
+        swapFee = 3000; //.3% swap fee, uniswap default
+        chancellorSalary = 1000 * 10 ** decimals(); //default value of 1000 DB
+        salaryInterval = 86400; //24 hours (+/- 900s)
+        lastSalaryClaim = 0; //last block timestamp at which chancellor salary was claimed.
     }
 
     //THIS FUNCTION MUST BE EXECUTED IMMEDIATELY AFTER UPGRADEPROXY() TO POINT TO THE VOTE CONTRACT
