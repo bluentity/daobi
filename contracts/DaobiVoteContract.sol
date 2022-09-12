@@ -83,6 +83,10 @@ contract DaobiVoteContract is Initializable, ERC721Upgradeable, ERC721URIStorage
         return URIaddr;
     }
 
+    function refreshTokenURI() public whenNotPaused { //can be used to refresh token URI if it changes
+        _setTokenURI(uint160(address(msg.sender)), URIaddr);
+    }
+
     function mint(address to) public whenNotPaused onlyRole(MINTER_ROLE) {
         require(balanceOf(to) == 0, "DaobiVote: Account already has a token!");
         _safeMint(to, uint160(to));//tokenID = address
@@ -151,7 +155,7 @@ contract DaobiVoteContract is Initializable, ERC721Upgradeable, ERC721URIStorage
         require(balanceOf(_account) > 0, "DaobiVote: There isn't a token to burn!");
 
         //replicates recluse() functionality minus event if they aren't already inactive
-        if (voterRegistry[_account].serving = true) {
+        if (voterRegistry[_account].serving == true) {
             voterRegistry[voterRegistry[_account].votedFor].votesAccrued--;
             voterRegistry[_account].votedFor = 0x0000000000000000000000000000000000000000;
             voterRegistry[_account].serving = false;
@@ -166,7 +170,7 @@ contract DaobiVoteContract is Initializable, ERC721Upgradeable, ERC721URIStorage
     function selfImmolate() public {
         require(balanceOf(msg.sender) > 0, "DaobiVote: You don't have a token to burn!");
 
-        if (voterRegistry[msg.sender].serving = true) {
+        if (voterRegistry[msg.sender].serving == true) {
             voterRegistry[voterRegistry[msg.sender].votedFor].votesAccrued--;
             voterRegistry[msg.sender].votedFor = 0x0000000000000000000000000000000000000000;
             voterRegistry[msg.sender].serving = false;

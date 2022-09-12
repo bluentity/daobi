@@ -18,7 +18,7 @@ contract DAObiContract2 is Initializable, ERC20Upgradeable, ERC20BurnableUpgrade
     constructor() initializer {}
 
     function initialize() initializer public {
-        __ERC20_init("DAObiContract2", "DBT");
+        __ERC20_init("DAObiContract2", "rtDB");
         __ERC20Burnable_init();
         __Pausable_init();
         __AccessControl_init();
