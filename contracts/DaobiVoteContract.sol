@@ -39,12 +39,12 @@ contract DaobiVoteContract is Initializable, ERC721Upgradeable, ERC721URIStorage
     //If someone burns their DBvt token, they automatically recluse.  They can't be voted for, and will have to re-register if they get a new token.  
 
 
-    event NewToken(address newDBvt);
-    event Registered(address regVoter, bytes6 nickname, address initVote);
-    event Reclused(address reclVoter);
-    event Voted(address voter, address votee);
-    event Burnt(address burnee);
-    event SelfBurnt(address burner);
+    event NewToken(address indexed newDBvt);
+    event Registered(address indexed regVoter, bytes6 nickname, address initVote);
+    event Reclused(address indexed reclVoter);
+    event Voted(address indexed voter, address indexed votee);
+    event Burnt(address indexed burnee);
+    event SelfBurnt(address indexed burner);
     event NFTRetarget(string newURI);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -181,6 +181,7 @@ contract DaobiVoteContract is Initializable, ERC721Upgradeable, ERC721URIStorage
     }
 
     //convenience getters.  There's already a getter for the public voterRegistry map
+    //APPARENTLY THERE IS NOT!  So you need these...
     function assessVotes(address _voter) public view returns (uint40) {
         return voterRegistry[_voter].votesAccrued;
     }
@@ -191,6 +192,10 @@ contract DaobiVoteContract is Initializable, ERC721Upgradeable, ERC721URIStorage
 
     function checkStatus(address _voter) public view returns (bool) {
         return voterRegistry[_voter].serving;
+    }
+
+    function getAlias(address _voter) public view returns (bytes6) {
+        return voterRegistry[_voter].courtName;
     }
 
 

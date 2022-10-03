@@ -23,7 +23,7 @@ contract DaobiChancellorsSeal is Initializable, ERC721Upgradeable, ERC721URIStor
     
     event SealURIRetarget(string newAddr); //emits URI of new seal if it is changed.
     event SealBurnt();
-    event SealMinted(address mintee);
+    event SealMinted(address indexed mintee);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}

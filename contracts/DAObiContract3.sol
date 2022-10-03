@@ -30,11 +30,11 @@ contract DAObiContract3 is Initializable, ERC20Upgradeable, ERC20BurnableUpgrade
     address public sealContract; //address of the Chancellor's Seal contract
 
     //events related to voting
-    event ClaimAttempted(address _claimant, uint40 _votes);
-    event ClaimSucceeded(address _claimant, uint40 _votes);
-    event NewChancellor(address _newChanc);
+    event ClaimAttempted(address indexed _claimant, uint40 _votes);
+    event ClaimSucceeded(address indexed _claimant, uint40 _votes);
+    event NewChancellor(address indexed _newChanc);
     event VoteContractChange(address _newVoteScheme);
-    event DaobiMinted(uint256 amount);
+    event DaobiMinted(uint256 indexed amount);
 
     //signals that the Chancellor's seal contract has been retargeted.  
     //The contract itself may send events internally; emits will be emitted from that address
@@ -42,16 +42,16 @@ contract DAObiContract3 is Initializable, ERC20Upgradeable, ERC20BurnableUpgrade
 
     //events and variables related to Uniswap/DAO integration
     address public DAOvault;
-    ISwapRouter public constant uniswapRouter = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564); //swaprouter02
-    address private constant daobiToken = 0xD79dA24D607FF594233F02126771dD35938F922b; //address of Token A, RinkDB
-    address private constant chainToken = 0xc778417E063141139Fce010982780140Aa0cD5Ab; //address of Token B, RinkWETH
-    uint24 swapFee; //uniswap pair swap fee, 3000 is standard (.3%)
+    ISwapRouter public constant uniswapRouter = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564); //swaprouter
+    address private constant daobiToken = 0x68af95a6f932a372e88170e9c2a46094FAeFd5D4; //address of Token A, RinkDB
+    address private constant chainToken = 0x9c3C9283D3e44854697Cd22D3Faa240Cfb032889; //address of Token B, RinkWETH [not needed, can simply call]
+    uint24 public swapFee; //uniswap pair swap fee, 3000 is standard (.3%)
     event DAORetargeted(address _newDAO);
 
     //chancellor salary functionality
-    uint256 chancellorSalary;
-    uint256 salaryInterval;
-    uint256 lastSalaryClaim; //last block timestamp at which chancellor salary was claimed.
+    uint256 public chancellorSalary;
+    uint256 public salaryInterval;
+    uint256 public lastSalaryClaim; //last block timestamp at which chancellor salary was claimed.
     event chancellorPaid(address _chancellor);
 
 
@@ -66,9 +66,14 @@ contract DAObiContract3 is Initializable, ERC20Upgradeable, ERC20BurnableUpgrade
         __AccessControl_init();
         __UUPSUpgradeable_init();
 
+
+    }
+
+    //execute this function to initialize new variables immediately after upgradeProxy()
+    function updateContract() public onlyRole(UPGRADER_ROLE) {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(TREASURER_ROLE, msg.sender); //TREASURER_ROLE is the contract "moderator"
-        _grantRole(CHANCELLOR_ROLE, msg.sender); //CHANCELLOR_ROLE should be the chancellor
+        //_grantRole(CHANCELLOR_ROLE, msg.sender); //contract upgrade should not change chancellor
         _grantRole(UPGRADER_ROLE, msg.sender);
 
         //variable initialization
@@ -108,6 +113,7 @@ contract DAObiContract3 is Initializable, ERC20Upgradeable, ERC20BurnableUpgrade
         _mint(address(this), amount + swapFee); //mint tokens into contract
         _mint(DAOvault, amount / 20); //mint 5% extra tokens into DAO vault
         
+        
         TransferHelper.safeApprove(daobiToken,address(uniswapRouter),amount); //approve uniswap transaction
 
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams(
@@ -115,13 +121,13 @@ contract DAObiContract3 is Initializable, ERC20Upgradeable, ERC20BurnableUpgrade
             chainToken, //output token
             swapFee,
             DAOvault, //eth from transaction sent to DAO
-            block.timestamp + 15, //execute trade immediately
+            block.timestamp + 120, //execute trade immediately
             amount,
             1, //trade will execute even if only 1 wei is received back
             0 //sqrtPriceLimitX96
         );
 
-        uniswapRouter.exactInputSingle{ value: msg.value }(params);
+        uniswapRouter.exactInputSingle(params);
 
         emit DaobiMinted(amount);
     }
@@ -200,7 +206,7 @@ contract DAObiContract3 is Initializable, ERC20Upgradeable, ERC20BurnableUpgrade
         //this will fail if the voting contract has not been assigned the VOTE_CONTRACT role
         DaobiChancellorsSeal seal = DaobiChancellorsSeal(sealContract); 
         seal.approve(address(this), 1);
-        seal.safeTransferFrom(seal.ownerOf(1), _newChancellor, 1);
+        seal.transferFrom(seal.ownerOf(1), _newChancellor, 1);
 
         _revokeRole(CHANCELLOR_ROLE, chancellor);
         chancellor = _newChancellor;
