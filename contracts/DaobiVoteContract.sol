@@ -8,6 +8,8 @@ import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol"
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
+import "./DAObiContract3.sol";
+
 contract DaobiVoteContract is Initializable, ERC721Upgradeable, ERC721URIStorageUpgradeable, PausableUpgradeable, AccessControlUpgradeable, UUPSUpgradeable {
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");//can pause contract
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE"); //can initiate new daobi voters
@@ -17,10 +19,11 @@ contract DaobiVoteContract is Initializable, ERC721Upgradeable, ERC721URIStorage
 
     //required information for each voter
     struct Voter {        
-        bool serving; //bools are 8 bits, in the future bitmasks can be used to further compress information if needed
         address votedFor; //160 bits
-        uint40 votesAccrued; //There should not be more than 2^40 players 
-        bytes6 courtName; //six UTF-8 characters -- twice as many as Emperor Qin needed, should be more than enough       
+        bool serving; //bools are 8 bits, in the future bitmasks can be used to further compress information if needed        
+        uint160 votesAccrued; //There can't be more voters than the address space
+        bytes32 courtName; //sixteen UTF-8 characters -- Emperor Qin needed 3, should be more than enough     
+        bytes23 blankGap; //gap variable to use up rest of 256 bit block; may be used in future.  
     }
 
     //maps addresses to their Voter info
@@ -40,12 +43,19 @@ contract DaobiVoteContract is Initializable, ERC721Upgradeable, ERC721URIStorage
 
 
     event NewToken(address indexed newDBvt);
-    event Registered(address indexed regVoter, bytes6 nickname, address initVote);
+    event Registered(address indexed regVoter, bytes32 nickname, address initVote);
     event Reclused(address indexed reclVoter);
     event Voted(address indexed voter, address indexed votee);
     event Burnt(address indexed burnee);
     event SelfBurnt(address indexed burner);
     event NFTRetarget(string newURI);
+
+    uint256 public propertyRequirement; //minimum number of tokens that must be held to vote.
+    address payable public tokenContract;
+    DAObi daobi;
+
+    bytes32 public constant VOTE_ADMIN_ROLE = keccak256("VOTE_ADMIN_ROLE");
+    bytes32 public constant MINREQ_ROLE = keccak256("MINREQ_ROLE");
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
@@ -63,6 +73,8 @@ contract DaobiVoteContract is Initializable, ERC721Upgradeable, ERC721URIStorage
         _grantRole(UPGRADER_ROLE, msg.sender);
         _grantRole(BURNER_ROLE, msg.sender);
         _grantRole(NFT_MANAGER, msg.sender);
+        _grantRole(VOTE_ADMIN_ROLE, msg.sender);
+        _grantRole(MINREQ_ROLE, msg.sender);
     }    
 
     function pause() public onlyRole(PAUSER_ROLE) {
@@ -94,6 +106,15 @@ contract DaobiVoteContract is Initializable, ERC721Upgradeable, ERC721URIStorage
         emit NewToken(to);
     }
 
+    function targetDaobi(address payable _daobi) public onlyRole(VOTE_ADMIN_ROLE) {
+        tokenContract = _daobi;
+        daobi = DAObi(_daobi);
+    }
+
+    function setMinimumTokenReq(uint256 _minDB) public onlyRole(MINREQ_ROLE) {
+        propertyRequirement = _minDB;
+    }
+
     function _beforeTokenTransfer(address from, address to, uint256 amount)
         internal
         whenNotPaused
@@ -115,10 +136,11 @@ contract DaobiVoteContract is Initializable, ERC721Upgradeable, ERC721URIStorage
 
     //register, the "serve" flag is automatically set and votes are initialized at zero
     //votesAccrued is left alone -- initializes to zero by default
-    function register(address _initialVote, bytes6 _name) whenNotPaused public {
+    function register(address _initialVote, bytes32 _name) whenNotPaused public {
         require(balanceOf(msg.sender) > 0, "DaobiVote: You must hold a token to register!");
         require(checkStatus(msg.sender) == false, "DaobiVote: You are already registered!");
         require(balanceOf(_initialVote) > 0 || _initialVote == 0x0000000000000000000000000000000000000000, "DaobiVote: Invalid candidate!");
+        require(daobi.balanceOf(msg.sender) >= propertyRequirement, "DaobiVote: You are too broke to register!");
         
         voterRegistry[msg.sender].serving = true;
         voterRegistry[msg.sender].votedFor = _initialVote;
@@ -141,6 +163,7 @@ contract DaobiVoteContract is Initializable, ERC721Upgradeable, ERC721URIStorage
         require(balanceOf(msg.sender) > 0, "DaobiVote: You don't have a token!");
         require(voterRegistry[msg.sender].serving == true, "DaobiVote: You're not registered!");
         require(_voteFor == 0x0000000000000000000000000000000000000000 || balanceOf(_voteFor) > 0, "DaobiVote: Invalid candidate!");
+        require(daobi.balanceOf(msg.sender) >= propertyRequirement, "DaobiVote: You are too broke to vote!");
 
         voterRegistry[voterRegistry[msg.sender].votedFor].votesAccrued--;
         voterRegistry[msg.sender].votedFor = _voteFor;
@@ -182,7 +205,7 @@ contract DaobiVoteContract is Initializable, ERC721Upgradeable, ERC721URIStorage
 
     //convenience getters.  There's already a getter for the public voterRegistry map
     //APPARENTLY THERE IS NOT!  So you need these...
-    function assessVotes(address _voter) public view returns (uint40) {
+    function assessVotes(address _voter) public view returns (uint160) {
         return voterRegistry[_voter].votesAccrued;
     }
 
@@ -194,7 +217,7 @@ contract DaobiVoteContract is Initializable, ERC721Upgradeable, ERC721URIStorage
         return voterRegistry[_voter].serving;
     }
 
-    function getAlias(address _voter) public view returns (bytes6) {
+    function getAlias(address _voter) public view returns (bytes32) {
         return voterRegistry[_voter].courtName;
     }
 
