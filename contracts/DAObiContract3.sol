@@ -43,8 +43,8 @@ contract DAObi is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable, Pau
     //events and variables related to Uniswap/DAO integration
     address public DAOvault;
     ISwapRouter public constant uniswapRouter = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564); //swaprouter
-    address private constant daobiToken = 0x82A9313b7D869373E80776e770a9285c2981C018; //address of Token A, in this case Daobi
-    address private constant chainToken = 0x9c3C9283D3e44854697Cd22D3Faa240Cfb032889; //address of Token B, WMATIC [not needed, can simply call]
+    address private constant daobiToken = 0x5988Bf243ADf1b42a2Ec2e9452D144A90b1FD9A9; //address of Token A, in this case Daobi
+    address private constant chainToken = 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270; //address of Token B, WMATIC [not needed, can simply call]
     uint24 public swapFee; //uniswap pair swap fee, 3000 is standard (.3%)
     event DAORetargeted(address _newDAO);
 
