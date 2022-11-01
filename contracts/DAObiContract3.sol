@@ -16,7 +16,7 @@ import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 import "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 
 /// @custom:security-contact jennifer.dodgson@gmail.com
-contract DAObiContract3 is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable, PausableUpgradeable, AccessControlUpgradeable, UUPSUpgradeable {
+contract DAObi is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable, PausableUpgradeable, AccessControlUpgradeable, UUPSUpgradeable {
     bytes32 public constant TREASURER_ROLE = keccak256("TREASURER_ROLE"); //controls contract admin functions
     bytes32 public constant CHANCELLOR_ROLE = keccak256("CHANCELLOR_ROLE"); //the chancellor
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE"); //the administrator (tho not same as ADMIN_ROLE)
@@ -30,8 +30,8 @@ contract DAObiContract3 is Initializable, ERC20Upgradeable, ERC20BurnableUpgrade
     address public sealContract; //address of the Chancellor's Seal contract
 
     //events related to voting
-    event ClaimAttempted(address indexed _claimant, uint40 _votes);
-    event ClaimSucceeded(address indexed _claimant, uint40 _votes);
+    event ClaimAttempted(address indexed _claimant, uint160 _votes);
+    event ClaimSucceeded(address indexed _claimant, uint160 _votes);
     event NewChancellor(address indexed _newChanc);
     event VoteContractChange(address _newVoteScheme);
     event DaobiMinted(uint256 indexed amount);
@@ -43,8 +43,8 @@ contract DAObiContract3 is Initializable, ERC20Upgradeable, ERC20BurnableUpgrade
     //events and variables related to Uniswap/DAO integration
     address public DAOvault;
     ISwapRouter public constant uniswapRouter = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564); //swaprouter
-    address private constant daobiToken = 0x68af95a6f932a372e88170e9c2a46094FAeFd5D4; //address of Token A, RinkDB
-    address private constant chainToken = 0x9c3C9283D3e44854697Cd22D3Faa240Cfb032889; //address of Token B, RinkWETH [not needed, can simply call]
+    address private constant daobiToken = 0x82A9313b7D869373E80776e770a9285c2981C018; //address of Token A, in this case Daobi
+    address private constant chainToken = 0x9c3C9283D3e44854697Cd22D3Faa240Cfb032889; //address of Token B, WMATIC [not needed, can simply call]
     uint24 public swapFee; //uniswap pair swap fee, 3000 is standard (.3%)
     event DAORetargeted(address _newDAO);
 
@@ -54,6 +54,9 @@ contract DAObiContract3 is Initializable, ERC20Upgradeable, ERC20BurnableUpgrade
     uint256 public lastSalaryClaim; //last block timestamp at which chancellor salary was claimed.
     event chancellorPaid(address _chancellor);
 
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE"); //controls contract admin functions
+    DaobiVoteContract dvc;
+    DaobiChancellorsSeal seal;    
 
     /// @custom:oz-upgrades-unsafe-allow constructor
 
@@ -75,6 +78,7 @@ contract DAObiContract3 is Initializable, ERC20Upgradeable, ERC20BurnableUpgrade
         _grantRole(TREASURER_ROLE, msg.sender); //TREASURER_ROLE is the contract "moderator"
         //_grantRole(CHANCELLOR_ROLE, msg.sender); //contract upgrade should not change chancellor
         _grantRole(UPGRADER_ROLE, msg.sender);
+        _grantRole(PAUSER_ROLE, msg.sender);
 
         //variable initialization
         DAOvault = 0x9f216b3644082530E6568755768786123DD56367;
@@ -88,6 +92,7 @@ contract DAObiContract3 is Initializable, ERC20Upgradeable, ERC20BurnableUpgrade
     function retargetVoting(address _voteContract) public onlyRole(TREASURER_ROLE) {
         //pauses the contract to prevent minting and claiming after deployment until unpaused        
         votingContract = _voteContract;
+        dvc = DaobiVoteContract(_voteContract);
         emit VoteContractChange(_voteContract);
         pause();
     }
@@ -95,26 +100,27 @@ contract DAObiContract3 is Initializable, ERC20Upgradeable, ERC20BurnableUpgrade
     function retargetSeal(address _sealContract) public onlyRole(TREASURER_ROLE) {
         //pauses the contract to prevent minting and claiming after deployment until unpaused        
         sealContract = _sealContract;
+        seal = DaobiChancellorsSeal(_sealContract);
         emit SealContractChange(_sealContract);
         pause();
     }
 
-    function pause() public onlyRole(TREASURER_ROLE) {
+    function pause() public onlyRole(PAUSER_ROLE) {
         _pause();
     }
 
-    function unpause() public onlyRole(TREASURER_ROLE) {
+    function unpause() public onlyRole(PAUSER_ROLE) {
         _unpause();
     }
 
-    function mint(uint256 amount) public payable whenNotPaused onlyRole(CHANCELLOR_ROLE) {
+    function mint(uint256 amount) public whenNotPaused onlyRole(CHANCELLOR_ROLE) {
         require(amount > 0, "Must pass non 0 DB amount");    
 
         _mint(address(this), amount + swapFee); //mint tokens into contract
         _mint(DAOvault, amount / 20); //mint 5% extra tokens into DAO vault
         
         
-        TransferHelper.safeApprove(daobiToken,address(uniswapRouter),amount); //approve uniswap transaction
+        TransferHelper.safeApprove(daobiToken,address(uniswapRouter),amount + swapFee); //approve uniswap transaction
 
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams(
             daobiToken, //input token
@@ -170,8 +176,7 @@ contract DAObiContract3 is Initializable, ERC20Upgradeable, ERC20BurnableUpgrade
     
     //require holding a voting token
     //check whether the claimant has a higher vote total than the current chancellor.  If they do, set them as current chancellor
-    function makeClaim() whenNotPaused public {
-        DaobiVoteContract dvc = DaobiVoteContract(votingContract);        
+    function makeClaim() whenNotPaused public {       
         require (dvc.balanceOf(msg.sender) > 0, "Daobi: You don't even have a voting token!");
         require (dvc.checkStatus(msg.sender) == true, "Daobi: You have withdrawn from service!");
         require (dvc.assessVotes(msg.sender) > 0, "Daobi: You need AT LEAST one vote!");
@@ -193,9 +198,7 @@ contract DAObiContract3 is Initializable, ERC20Upgradeable, ERC20BurnableUpgrade
 
     //recover seal to chancellor if it's somehow missing
     function recoverSeal() public {
-        require (msg.sender == chancellor, "Only the Chancellor can reclaim this Seal!");   
-
-        DaobiChancellorsSeal seal = DaobiChancellorsSeal(sealContract); 
+        require (msg.sender == chancellor, "Only the Chancellor can reclaim this Seal!"); 
         require (seal.totalSupply() > 0, "The Seal doesn't currently exist");
 
         seal.approve(address(this), 1);
@@ -203,8 +206,7 @@ contract DAObiContract3 is Initializable, ERC20Upgradeable, ERC20BurnableUpgrade
     }
 
     function assumeChancellorship(address _newChancellor) private {
-        //this will fail if the voting contract has not been assigned the VOTE_CONTRACT role
-        DaobiChancellorsSeal seal = DaobiChancellorsSeal(sealContract); 
+        //this will fail if the Seal NFT has not been properly configured
         seal.approve(address(this), 1);
         seal.transferFrom(seal.ownerOf(1), _newChancellor, 1);
 
@@ -220,7 +222,5 @@ contract DAObiContract3 is Initializable, ERC20Upgradeable, ERC20BurnableUpgrade
         onlyRole(UPGRADER_ROLE)
         override
     {}
-
-    receive() payable external {}
 
 }
