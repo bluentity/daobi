@@ -25,6 +25,8 @@ contract DaobiChancellorsSeal is Initializable, ERC721Upgradeable, ERC721URIStor
     event SealBurnt();
     event SealMinted(address indexed mintee);
 
+    address public tokenContract;
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
     
@@ -51,7 +53,9 @@ contract DaobiChancellorsSeal is Initializable, ERC721Upgradeable, ERC721URIStor
 
     function targetDaobiContract(address _dbContract) public onlyRole(UPGRADER_ROLE)
     {
-        _grantRole(DAOBI_CONTRACT, _dbContract);
+        _revokeRole(DAOBI_CONTRACT, tokenContract);
+        tokenContract = _dbContract;
+        _grantRole(DAOBI_CONTRACT, tokenContract);
     }
 
     function setURI(string memory newURI) public whenNotPaused onlyRole(SEAL_MANAGER) {
