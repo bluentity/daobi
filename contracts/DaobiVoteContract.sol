@@ -96,6 +96,7 @@ contract DaobiVoteContract is Initializable, ERC721Upgradeable, ERC721URIStorage
     }
 
     function refreshTokenURI() public whenNotPaused { //can be used to refresh token URI if it changes
+        require(this.ownerOf(uint160(address(msg.sender))) == msg.sender, "You can only update your own vote token");
         _setTokenURI(uint160(address(msg.sender)), URIaddr);
     }
 
