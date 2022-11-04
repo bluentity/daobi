@@ -28,11 +28,15 @@ DaobiChancellorSeal is a modified ERC-721.  It is non-transferable except by a s
 3. Execute the setURI() command of the deployed DaobiVoteContract with the address of the voting token NFT as the argument.
 4. Deploy DAObiContract3.sol using the ethers.upgradeProxy(kind: 'uups') command to upgrade the existing token contract.
 5. Execute DAObiContract3.retargetVoting() with the address of DaobiVoteContract as an argument.
-6. Deploy DaobiChancellorsSeal.sol using the ethers.deployProxy(kind: 'uups') command
-7. Execute the DaobiChancellorsSeal.setURI() function with the seal NFT URI address as the argument.
-8. Execute the DaobiChancellorsSeal.targetDaobiContractd function with the address of DAObiContract3 as the argument.
-9. Execute the DAObiContract3.retargetSeal() function with the Daobi Chancellor Seal contract address as the argument.
-10. Unpause the DAObiContract3 by executing its unpause() function.
+6. Execute DAobiVoteContract3.targetDaobi() with the address of the token contract as an argument.
+7. Deploy DaobiChancellorsSeal.sol using the ethers.deployProxy(kind: 'uups') command
+8. Execute the DaobiChancellorsSeal.setURI() function with the seal NFT URI address as the argument.
+9. Execute the DaobiChancellorsSeal.targetDaobiContract function with the address of DAObiContract3 as the argument.
+10. Execute the DAObiContract3.retargetSeal() function with the Daobi Chancellor Seal contract address as the argument.
+11. Set the minimum token requirement to vote using the DaobiVoteContract.setMinimumTokenReq() command.  Remember the typical ERC-20 contract uses 18 decimals.
+12. Run the DAObiContract3.updateContract() command to initialize the upgraded contract's remaining required values.
+13. Use the DaobiChancellorSeal.mint() function to mint the seal to a valid non-zero address
+14. Unpause the DAObiContract3 by executing its unpause() function.
 
 Once all this is done, use the DaobiVoteContract.mint() function to add voters
 
