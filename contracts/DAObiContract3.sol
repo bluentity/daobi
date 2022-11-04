@@ -17,9 +17,10 @@ import "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 
 /// @custom:security-contact jennifer.dodgson@gmail.com
 contract DAObi is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable, PausableUpgradeable, AccessControlUpgradeable, UUPSUpgradeable {
-    bytes32 public constant TREASURER_ROLE = keccak256("TREASURER_ROLE"); //controls contract admin functions
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE"); //controls contract admin functions    
     bytes32 public constant CHANCELLOR_ROLE = keccak256("CHANCELLOR_ROLE"); //the chancellor
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE"); //the administrator (tho not same as ADMIN_ROLE)
+    bytes32 public constant TREASURER_ROLE = keccak256("TREASURER_ROLE"); //controls contract admin functions
 
     //additions to support on-chain election of chancellor: 
     address public chancellor; //the address of the current chancellor
@@ -28,6 +29,10 @@ contract DAObi is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable, Pau
     //the voting contract should contain a mapping in which, given an address, the number of votes for that address (if any) can be found
     address public votingContract; 
     address public sealContract; //address of the Chancellor's Seal contract
+
+    //interfaces with vote & seal contracts
+    DaobiVoteContract dvc;
+    DaobiChancellorsSeal seal;    
 
     //events related to voting
     event ClaimAttempted(address indexed _claimant, uint160 _votes);
@@ -43,8 +48,9 @@ contract DAObi is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable, Pau
     //events and variables related to Uniswap/DAO integration
     address public DAOvault;
     ISwapRouter public constant uniswapRouter = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564); //swaprouter
+    //November 2022: these are the POLYGON MAIN addresses
     address private constant daobiToken = 0x5988Bf243ADf1b42a2Ec2e9452D144A90b1FD9A9; //address of Token A, in this case Daobi
-    address private constant chainToken = 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270; //address of Token B, WMATIC [not needed, can simply call]
+    address private constant chainToken = 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270; //address of Token B, WMATIC
     uint24 public swapFee; //uniswap pair swap fee, 3000 is standard (.3%)
     event DAORetargeted(address _newDAO);
 
@@ -52,11 +58,7 @@ contract DAObi is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable, Pau
     uint256 public chancellorSalary;
     uint256 public salaryInterval;
     uint256 public lastSalaryClaim; //last block timestamp at which chancellor salary was claimed.
-    event chancellorPaid(address _chancellor);
-
-    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE"); //controls contract admin functions
-    DaobiVoteContract dvc;
-    DaobiChancellorsSeal seal;    
+    event chancellorPaid(address _chancellor);   
 
     /// @custom:oz-upgrades-unsafe-allow constructor
 
@@ -76,12 +78,11 @@ contract DAObi is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable, Pau
     function updateContract() public onlyRole(UPGRADER_ROLE) {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(TREASURER_ROLE, msg.sender); //TREASURER_ROLE is the contract "moderator"
-        //_grantRole(CHANCELLOR_ROLE, msg.sender); //contract upgrade should not change chancellor
         _grantRole(UPGRADER_ROLE, msg.sender);
         _grantRole(PAUSER_ROLE, msg.sender);
 
         //variable initialization
-        DAOvault = 0x9f216b3644082530E6568755768786123DD56367;
+        DAOvault = 0x05cF4dc7e44e5560a2B5d999D675BC626C127f6E;
         swapFee = 3000; //.3% swap fee, uniswap default
         chancellorSalary = 1000 * 10 ** decimals(); //default value of 1000 DB
         salaryInterval = 86400; //24 hours (+/- 900s)
@@ -156,9 +157,10 @@ contract DAObi is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable, Pau
         chancellorSalary = _newSalary;
     }
 
-    function retargetDAO(address _newVault) public whenNotPaused onlyRole(TREASURER_ROLE){
+    function retargetDAO(address _newVault) public onlyRole(TREASURER_ROLE){
         DAOvault = _newVault;
         emit DAORetargeted(_newVault);
+        pause();
     }
 
     function setSwapFee(uint24 _swapFee) public whenNotPaused onlyRole(TREASURER_ROLE){
