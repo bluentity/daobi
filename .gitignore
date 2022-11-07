@@ -12,8 +12,6 @@ cache
 scripts
 test
 hardhat.config*
-package*
-package-lock*
 .openzeppelin
 
 #test contracts
