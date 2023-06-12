@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.10;
 
-interface DAObi {
+interface IDAObi {
   function CHANCELLOR_ROLE (  ) external view returns ( bytes32 );
   function DAOvault (  ) external view returns ( address );
   function DEFAULT_ADMIN_ROLE (  ) external view returns ( bytes32 );

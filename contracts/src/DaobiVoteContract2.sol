@@ -24,7 +24,7 @@ contract DaobiVoteContract is Initializable, ERC721Upgradeable, ERC721URIStorage
         uint160 votesAccrued; //There can't be more voters than the address space
         bytes32 courtName; //sixteen UTF-8 characters -- Emperor Qin needed 3, should be more than enough 
         uint32 voteDate; //block.timestamp of last vote cast
-        bytes19 blankGap; //gap variable to use up rest of 256 bit block; may be used in future.  
+        bytes19 __gap; //gap variable to use up rest of 256 bit block; may be used in future.  
     }
 
     //maps addresses to their Voter info
@@ -53,7 +53,7 @@ contract DaobiVoteContract is Initializable, ERC721Upgradeable, ERC721URIStorage
 
     uint256 public propertyRequirement; //minimum number of tokens that must be held to vote.
     address payable public tokenContract;
-    DAObi daobi;
+    IDAObi daobi;
 
     bytes32 public constant VOTE_ADMIN_ROLE = keccak256("VOTE_ADMIN_ROLE");
     bytes32 public constant MINREQ_ROLE = keccak256("MINREQ_ROLE");
@@ -110,7 +110,7 @@ contract DaobiVoteContract is Initializable, ERC721Upgradeable, ERC721URIStorage
 
     function targetDaobi(address payable _daobi) public onlyRole(VOTE_ADMIN_ROLE) {
         tokenContract = _daobi;
-        daobi = DAObi(_daobi);
+        daobi = IDAObi(_daobi);
     }
 
     function setMinimumTokenReq(uint256 _minDB) public onlyRole(MINREQ_ROLE) {
@@ -122,7 +122,7 @@ contract DaobiVoteContract is Initializable, ERC721Upgradeable, ERC721URIStorage
         whenNotPaused
         override
     {
-        super._beforeTokenTransfer(ffrom, to, tokenId, batchSize);
+        super._beforeTokenTransfer(from, to, tokenId, batchSize);
     }
 
     function _authorizeUpgrade(address newImplementation)
@@ -147,6 +147,7 @@ contract DaobiVoteContract is Initializable, ERC721Upgradeable, ERC721URIStorage
         voterRegistry[msg.sender].serving = true;
         voterRegistry[msg.sender].votedFor = _initialVote;
         voterRegistry[_initialVote].votesAccrued++;
+        voterRegistry[msg.sender].voteDate = uint32(block.timestamp % 2**32);
         voterRegistry[msg.sender].courtName = _name;
 
         emit Registered(msg.sender, _name, _initialVote);
