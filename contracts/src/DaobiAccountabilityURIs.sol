@@ -3,23 +3,17 @@ pragma solidity ^0.8.10;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/Base64Upgradeable.sol";
 
-import "./IDaobiVoteContract.sol";
 
+contract DaobiAccountabilityURIs is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
 
-contract DaobiAccountabilityURIs is Initializable, PausableUpgradeable, AccessControlUpgradeable, UUPSUpgradeable {
-
-    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");//can pause contract 
     bytes32 public constant USER_ROLE = keccak256("USER_ROLE");//can execute certain functions 
-    bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE"); //contract admin (do not confuse with ADMIN_ROLE) 
+    bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE"); //contract admin (do not confuse with DEFAULT_ADMIN_ROLE)
 
-    IDaobiVoteContract dbvote;
-    event retargetVote(address _newVote);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -27,24 +21,14 @@ contract DaobiAccountabilityURIs is Initializable, PausableUpgradeable, AccessCo
     }
 
     function initialize() initializer public {
-        __Pausable_init();
         __AccessControl_init();
         __UUPSUpgradeable_init();
 
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(PAUSER_ROLE, msg.sender);        
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);      
         _grantRole(UPGRADER_ROLE, msg.sender);
         _grantRole(USER_ROLE, 0x0000000000000000000000000000000000000000);             
  
-    }    
-
-    function pause() public onlyRole(PAUSER_ROLE) {
-        _pause();
-    }
-
-    function unpause() public onlyRole(PAUSER_ROLE) {
-        _unpause();
-    }
+    } 
 
     function getContractURI() public view onlyRole(USER_ROLE) returns (string memory) { //returns on-chain contract-level metadata https://docs.opensea.io/docs/contract-level-metadata
         bytes memory URIdata = abi.encodePacked(
@@ -91,11 +75,11 @@ contract DaobiAccountabilityURIs is Initializable, PausableUpgradeable, AccessCo
         }
         string[4] memory accuserString;
         {
-            accuserString = sinifyAddress(_target);
+            accuserString = sinifyAddress(_accuser);
         }
         string[4] memory chancellorString;
         {
-            chancellorString = sinifyAddress(_target);
+            chancellorString = sinifyAddress(_chancellor);
         }        
         string[2] memory dateString;
         {
@@ -138,7 +122,6 @@ contract DaobiAccountabilityURIs is Initializable, PausableUpgradeable, AccessCo
                 abi.encodePacked(
                 ' </defs>',        
                 '<g>',
-                //' <rect width="135.47" height="67.733" fill="#f30000" stroke="#000" stroke-width=".26458"/>',
                 ' <rect width="135.47" height="67.733" fill="', timestampToRGB(), '" stroke="#000" stroke-width=".26458"/>',
                 '</g>',
                 '<rect x="4.4979" y="4.2333" width="127" height="59.267" ry="1.5385e-6" fill="url(#pattern37489)" stroke-width="0"/>',
@@ -146,11 +129,9 @@ contract DaobiAccountabilityURIs is Initializable, PausableUpgradeable, AccessCo
                 ' <text x="10.887571" y="32.662712" font-family="Arizonia" font-size="11.289px" text-align="center" writing-mode="tb-rl" style="text-orientation:upright" xml:space="preserve"><tspan x="10.887571" y="32.662712" font-family="MingLiU" font-size="11.289px" stroke-width="0">\u6d41\u653e\u4eea</tspan></text>',
                 ' <g font-family="MingLiU" writing-mode="vertical-lr">',
                 '  <text x="23.704588" y="18.88098" font-size="4.9389px" text-align="center" style="text-orientation:upright" xml:space="preserve"><tspan x="23.704588" y="18.88098" direction="rtl" font-size="4.9389px" stroke-width="0" writing-mode="vertical-lr">\u9010\u7e25</tspan></text>',
-                '  <text x="21.637325" y="39.140129" direction="rtl" font-size="3.175px" text-align="center" style="text-orientation:upright" xml:space="preserve"><tspan x="21.637325" y="39.140129">', accuserString[0], '</tspan><tspan x="25.606075" y="39.140129">',accuserString[1], '</tspan></text>'
-                //'  <text x="21.637325" y="39.140129" direction="rtl" font-size="3.175px" text-align="center" style="text-orientation:upright" xml:space="preserve"><tspan x="21.637325" y="39.140129">\u7a7a\u7231\u4e00\u4e00\u4e94\u4e03\u4e00\u4e09\u4e03</tspan><tspan x="25.606075" y="39.140129">\u4e59\u4e09\u516b\u516d\u4e8c\u4e5d\u516d\u5df1\u621a</tspan></text>'
+                '  <text x="21.637325" y="39.140129" direction="rtl" font-size="3.175px" text-align="center" style="text-orientation:upright" xml:space="preserve"><tspan x="21.637325" y="39.140129">', accuserString[0], '</tspan><tspan x="25.606075" y="39.140129">',accuserString[1], '</tspan></text>'                
                 ),
                 abi.encodePacked(
-                //'  <text x="34.178707" y="34.04089" direction="rtl" font-size="3.175px" text-align="center" style="text-orientation:upright" xml:space="preserve"><tspan x="34.178707" y="34.04089">\u620a\u516d\u56db\u4e00\u4e16\u4e03\u7a7a\u5df1\u4e94\u5df1\u4e5d</tspan><tspan x="38.147457" y="34.04089">\u4e01\u4e09\u4e5d\u7532\u56db\u4e94\u7a7a\u4e00\u4e00\u4e59\u4e59\u4e03</tspan></text>',
                 '  <text x="34.178707" y="34.04089" direction="rtl" font-size="3.175px" text-align="center" style="text-orientation:upright" xml:space="preserve"><tspan x="34.178707" y="34.04089">', accuserString[2], '</tspan><tspan x="38.147457" y="34.04089">', accuserString[3], '</tspan></text>',
                 '  <text x="48.925163" y="17.089352" direction="rtl" font-size="4.9389px" text-align="center" style="text-orientation:upright" xml:space="preserve"><tspan x="48.925163" y="17.089352" font-size="4.9389px" stroke-width="0">\u8a63</tspan></text>',
                 '<text x="46.857906" y="36.383785" direction="rtl" font-size="3.175px" text-align="center" style="text-orientation:upright" xml:space="preserve"><tspan x="46.857906" y="36.383785">', targetString[0], '</tspan><tspan x="50.826656" y="36.383785">', targetString[1], '</tspan></text>'
@@ -161,7 +142,6 @@ contract DaobiAccountabilityURIs is Initializable, PausableUpgradeable, AccessCo
                 '   <text x="87.238396" y="18.74316" direction="rtl" font-size="4.9389px" text-align="center" style="text-orientation:upright" xml:space="preserve"><tspan x="87.238396" y="18.74316" font-size="4.9389px" stroke-width="0">\u65e5\u671f</tspan></text>'
                 ),
                 abi.encodePacked(
-                //'<text x="84.757675" y="36.383781" direction="rtl" font-size="3.5278px" text-align="center" style="text-orientation:upright" xml:space="preserve"><tspan x="84.757675" y="36.383781">\u4e00\u516d\u4e03\u516d\u4e8c</tspan><tspan x="89.167397" y="36.383781">\u4e94\u4e8c\u516b\u4e5d\u516d</tspan></text>',
                 '<text x="84.757675" y="36.383781" direction="rtl" font-size="3.5278px" text-align="center" style="text-orientation:upright" xml:space="preserve"><tspan x="84.757675" y="36.383781">',dateString[0], '</tspan><tspan x="89.167397" y="36.383781">', dateString[1], '</tspan></text>',
                 '<text x="100.0554" y="44.928463" direction="rtl" font-size="9.1722px" text-align="center" style="text-orientation:upright" xml:space="preserve"><tspan x="100.0554" y="44.928463" font-size="9.1722px" stroke-width="0">\u76f8\u570b</tspan></text>',
                 '<text x="110.11607" y="34.178707" direction="rtl" font-size="3.175px" text-align="center" style="text-orientation:upright" xml:space="preserve"><tspan x="110.11607" y="34.178707">', chancellorString[0], '</tspan><tspan x="114.08482" y="34.178707">', chancellorString[1], '</tspan></text>'
@@ -211,23 +191,38 @@ contract DaobiAccountabilityURIs is Initializable, PausableUpgradeable, AccessCo
             abi.encodePacked(
                 '{',
                     '"name": "The Banishing of ', StringsUpgradeable.toHexString(_target), '",', 
-                    '"description": "Commemorates the banishment of a DAObi Courtier for excessive idleness",',
+                    '"description": "Commemorates the banishment of', StringsUpgradeable.toHexString(_target), 'for excessive idleness",',
                     '"image": "', generateSVG(_target, _accuser, _chancellor, _numSupporters), '",',
-                    //'"image": "', daobiLogo(), '"',
                     '"external_url": "https://www.daobi.org/",'
             ),
             abi.encodePacked(
                     '"attributes": [',
+                        '{',                            
+                            '"trait_type": "Banished Courtier",',
+                            '"value": "', StringsUpgradeable.toHexString(_target), '"',
+                        '},',
                         '{',
                             '"display_type": "date",',
                             '"trait_type": "Banishment Date",',
                             '"value": "', StringsUpgradeable.toString(block.timestamp), '"',
-                        '},',
+                        '},'                        
+            ),
+            abi.encodePacked(            
+                        '{',                            
+                            '"trait_type": "Chief Accuser",',
+                            '"value": "', StringsUpgradeable.toHexString(_accuser), '"',
+                        '},',                        
+                        '{',                            
+                            '"trait_type": "DAObi Chancellor",',
+                            '"value": "', StringsUpgradeable.toHexString(_chancellor), '"',
+                        '},'
+            ),
+            abi.encodePacked(            
                         '{',
-                            //'"display_type": "number",',
-                            '"trait_type": "Supporters",',
+                            '"display_type": "number",',
+                            '"trait_type": "Number of Supporters",',
                             '"value": "', StringsUpgradeable.toString(_numSupporters), '"',
-                        '}',                   
+                        '}',                                           
                     ']',
                 '}'
             )
@@ -242,11 +237,6 @@ contract DaobiAccountabilityURIs is Initializable, PausableUpgradeable, AccessCo
 
 
     }   
-
-    function targetVote(address _vote) public onlyRole(USER_ROLE) {
-        dbvote = IDaobiVoteContract(_vote);
-        emit retargetVote(_vote);
-    }
 
     //string utilities
     function sinifyAddress(address _address) public pure returns (string[4] memory) {

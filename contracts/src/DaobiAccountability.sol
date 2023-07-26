@@ -24,15 +24,14 @@ contract DaobiAccountability is Initializable, ERC721Upgradeable, ERC721URIStora
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");//admin role: can change contract settings
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE"); //contract admin (do not confuse with ADMIN_ROLE)
 
-    //address private constant daobiToken = 0x5988Bf243ADf1b42a2Ec2e9452D144A90b1FD9A9;
-    //address private constant URIgenAddress = 0x0;
-    uint public constant DAY_IN_SECONDS = 30;    //86400 #CHANGE BEFORE PRODUCTION!!
+    uint public constant DAY_IN_SECONDS = 86400;    //ENSURE 86400 BEFORE PRODUCTION!!
 
     address public DAOvault; //recipient of handling fee
     uint8 public handlingFee; //should be an integer whose inverse gives the desired rate e.g. 1% = 100
     uint256 public cost; //how much it costs to make an accusation
     uint8 public idleDays; //how long someone must be idle before they can be accused of dereliction
     uint8 public responseDays; //how long someone accused has to refute an accusation
+    uint8 public staleDays; //how long after responseDays have elapsed that an arbitrary user can terminate an accusation 
     uint16 public minSupporters; //how many supporters are NEEDED to kick someone off
     uint16 public maxSupporters; //how many supporters ARE ALLOWED to participate in an accusation.  Don't go overboard for memory management reasons.
 
@@ -58,6 +57,7 @@ contract DaobiAccountability is Initializable, ERC721Upgradeable, ERC721URIStora
     }
 
     mapping (address => Accusation) public grudgeBook;
+    mapping (address => address) public accusationTracker;
 
 
 
@@ -81,18 +81,20 @@ contract DaobiAccountability is Initializable, ERC721Upgradeable, ERC721URIStora
         _grantRole(MANAGER_ROLE, msg.sender);
         _grantRole(PAUSER_ROLE, msg.sender);
 
-       /* DAOvault = 0x05cF4dc7e44e5560a2B5d999D675BC626C127f6E;
+        
         handlingFee = 40;
-        idleDays = 14;
-        responseDays = 5;*/
+        idleDays = 7;
+        responseDays = 3;
+        staleDays = 1;
+        cost = 1000 * 10 ** daobi.decimals();
+        minSupporters = 2;
+        maxSupporters = 32; 
 
-        /*daobi = IDAObi(0x5988Bf243ADf1b42a2Ec2e9452D144A90b1FD9A9);
-        dbvote = IDaobiVoteContract(0xe8A858B29311652F7e2170118FbEaD34d097e88A);    
-        URIcontract = IDaobiAccountabilityURIs(0x0000000000000000000000000000000000000000);*/
-
-        /*cost = 1000 * 10 ** daobi.decimals();
-        minSupporters = 4;
-        maxSupporters = 32;*/
+        //for debugging purposes, assigned separately during deployment for automation
+        //DAOvault = 0x26bA3fb6F4b0c3394A001b0b09961663b2087d51;
+        //daobi = IDAObi(0x07A8868cb63a85de48916E797B21424f0b5E5786);
+        //dbvote = IDaobiVoteContract(0xDe0804D5ceC76595180d1F8EA00a815E82200Fd8);    
+        //URIcontract = IDaobiAccountabilityURIs(0xd7d0151edA766ed78F84b4B3e926efff7b9cd393);        
 
     }
 
@@ -106,13 +108,17 @@ contract DaobiAccountability is Initializable, ERC721Upgradeable, ERC721URIStora
 
     //need to add a check to prevent players from repeatedly making accusations as "supporters" -- will require another mapping.
     function makeAccusation(address _target) public whenNotPaused { //create accusation
-        //check if target has not voted within specified time
-        require(dbvote.balanceOf(msg.sender) > 0, "DaobiAccountability: You don't have a vote token!");
-        require(dbvote.balanceOf(_target) > 0, "DaobiAccountability: You can only accuse another courtier!");
-        require(grudgeBook[_target].accuser != msg.sender, "DaobiAccountability: You already have an open accusation against this courtier!");
-        require(uint32(block.timestamp % 2**32) - dbvote.getVoteDate(_target)  >= idleDays * DAY_IN_SECONDS, "DaobiAccountability: Target has not been idle!");        
-        require((grudgeBook[_target].accuser != address(0)) || (daobi.balanceOf(msg.sender) >= cost), "DaobiAccountability: You lack the funds to make an accusation");
+
+        resetAccusationTracker(msg.sender); //slightly increases gas costs vs making users run themselves, but very convenient.
+
+        require(dbvote.balanceOf(msg.sender) > 0, "DaobiAccountability: You don't have a vote token!"); //check the user has a vote token
+        require(dbvote.balanceOf(_target) > 0, "DaobiAccountability: You can only accuse another courtier!"); //check that target has a vote token
+        require(grudgeBook[_target].accuser != msg.sender, "DaobiAccountability: You already have an open accusation against this courtier!");        
+        require(checkAccusation(msg.sender, _target) == true,"DaobiAccountability: You already have an active accusation!"); //check to avoid multiple votes per target
+        require(uint32(block.timestamp % 2**32) - dbvote.getVoteDate(_target)  >= idleDays * DAY_IN_SECONDS, "DaobiAccountability: Target has not been idle!");  //check if target has not voted within specified time      
+        require((grudgeBook[_target].accuser != address(0)) || (daobi.balanceOf(msg.sender) >= cost), "DaobiAccountability: You lack the funds to make an accusation"); //make sure they have enough tokens
         require(grudgeBook[_target].supporters.length < maxSupporters, "DaobiAccountability: Too many others have already joined in this accusation!");
+        
         
         if (grudgeBook[_target].accuser == address(0)) {//if initial accuser
             grudgeBook[_target].accuser = msg.sender;
@@ -131,8 +137,8 @@ contract DaobiAccountability is Initializable, ERC721Upgradeable, ERC721URIStora
     }    
 
     function refuteAccusation() public whenNotPaused {
-        require(dbvote.balanceOf(msg.sender) != 0, "DaobiAccountability: You've already lost your court status!");
-        require(grudgeBook[msg.sender].accuser != address(0), "DaobiAccountability: Nobody has made an accusation against you!");
+        require(dbvote.balanceOf(msg.sender) != 0, "DaobiAccountability: You've already lost your court status!"); //can't refute if you're already banished
+        require(grudgeBook[msg.sender].accuser != address(0), "DaobiAccountability: Nobody has made an accusation against you!"); //or if there is no accusation at all
 
         if (dbvote.getVoteDate(msg.sender) > grudgeBook[msg.sender].accusationTime) { //if the user HAS VOTED since the accusation is made, he gets the money
             uint feePay = grudgeBook[msg.sender].accBalance / handlingFee;
@@ -153,9 +159,23 @@ contract DaobiAccountability is Initializable, ERC721Upgradeable, ERC721URIStora
             delete grudgeBook[msg.sender];
 
             daobi.transfer(accuser, wergild);
-            daobi.transfer(DAOvault, feePay);         }        
+            daobi.transfer(DAOvault, feePay);         
+        }    
+    }
 
+    function thirdPartyRefute(address _refutee) public whenNotPaused { //allows anyone to terminate a stale accusation.  Tokens all go to the DAO, but the third party gets their vote back.
+        require(msg.sender != _refutee, "DaobiAccountability: Use first-party refutation instead");
+        require(dbvote.balanceOf(msg.sender) != 0, "DaobiAccountability: Only a courtier may terminate an accusation!!"); //third party must have a vote token
+        require(grudgeBook[_refutee].accuser != address(0), "DaobiAccountability: There is no active accusation against them!"); //and there must be an accusation to refute
+        require(block.timestamp > (grudgeBook[_refutee].accusationTime + (responseDays * DAY_IN_SECONDS) + (staleDays * DAY_IN_SECONDS)), "DaobiAccountability: You must wait until the accusation is eligible for action!");
+    
         
+        uint balance = grudgeBook[_refutee].accBalance;
+
+        emit AccusationRefuted(grudgeBook[_refutee].accuser, _refutee);
+        delete grudgeBook[_refutee];
+
+        daobi.transfer(DAOvault, balance);        
     }
 
     function banish(address _target) public whenNotPaused {
@@ -169,27 +189,30 @@ contract DaobiAccountability is Initializable, ERC721Upgradeable, ERC721URIStora
 
         //check whether the target has pre-emptively burned his token.  If he hasn't, his token is burned and the accuser gets his money back sans a handling fee.
         if (dbvote.balanceOf(_target) > 0) { 
+
             uint feePay = grudgeBook[_target].accBalance / handlingFee;
             uint wergild = grudgeBook[_target].accBalance - feePay;
             address accuser = grudgeBook[_target].accuser;
             
-
             daobi.transfer(accuser, wergild);
             daobi.transfer(DAOvault, feePay); 
 
             dbvote.burn(_target);
             mint(msg.sender, _target);
-            
-            emit Banished(msg.sender, _target);
-            delete grudgeBook[_target];
 
-        } else { //If so, the accuser's money is returned and the accusation is deleted but nothing else happens
-            uint refund = grudgeBook[_target].accBalance;
+            delete grudgeBook[_target];
+            emit Banished(msg.sender, _target);
+
+        } else { //If so, the accuser's money is returned minus a handling fee and the accusation is deleted but nothing else happens
+
+            uint feePay = grudgeBook[_target].accBalance / handlingFee;
+            uint refund = grudgeBook[_target].accBalance - feePay;
+
             delete grudgeBook[_target];
             daobi.transfer(msg.sender, refund);
-        }
-        
-        
+            daobi.transfer(DAOvault, feePay); 
+            
+        }      
     }
 
     function mint(address _to, address _target) private {
@@ -236,13 +259,12 @@ contract DaobiAccountability is Initializable, ERC721Upgradeable, ERC721URIStora
         daobi = IDAObi(_daobi);
     }
 
-    /*function setSupporters(uint16 _min, uint16 _max) public onlyRole(MANAGER_ROLE) {
-        minSupporters = _min;
-        maxSupporters = _max;
-        emit SupporterReqChange(_min, _max);
-    }*/
+    function currentURIContract() public view returns (address) {
+        return address(URIcontract);
+    }
 
-    function adjust(uint16 _min, uint16 _max, uint8 _fee, uint256 _cost, uint8 _idle, uint8 _response) public onlyRole (MANAGER_ROLE) {
+    //adjustment function, determines rules for voting
+    function adjust(uint16 _min, uint16 _max, uint8 _fee, uint256 _cost, uint8 _idle, uint8 _response, uint8 _stale) public onlyRole (MANAGER_ROLE) {
         require(_max >= _min, "DaobiAccountability: MaxSupporters cannot be smaller than MinSupporters.");
         
         if (_min != 0) {
@@ -268,12 +290,11 @@ contract DaobiAccountability is Initializable, ERC721Upgradeable, ERC721URIStora
         if (_response != 0) {
             responseDays = _response;
         }
+
+        if (_stale != 0) {
+            staleDays = _stale;
+        }
     }
-
-    //functions for converting various values to Chinese hexadecimal characters
-
-
-    
 
     //getters for the Accusation structure
 
@@ -295,8 +316,60 @@ contract DaobiAccountability is Initializable, ERC721Upgradeable, ERC721URIStora
 
     function getNumSupporters(address _target) public view returns (uint) {
         return grudgeBook[_target].supporters.length;
-    }    
-    
+    }     
+
+    //functions to avoid duplicate accusations.  I don't think this is well optimized but it works
+    function checkAccusation(address _user, address _target) private returns (bool) { //checks if the user's current accusation is no longer valid, and updates it to the target if it is not.
+        if(accusationTracker[_user] == address(0)) { //user has never made an accusation before, or their accusation has been reset -- valid accusation, update
+            accusationTracker[_user] = _target;
+            return true;
+        }
+
+        else if (grudgeBook[accusationTracker[_user]].accuser == address(0)) { //user's current accusation has been resolved -- valid accusation, update.
+            accusationTracker[_user] = _target;
+            return true;
+        }
+        
+        else if (accusationTracker[_user] == _target) { //user is attempting a duplicate accusation, invalid
+            return false;
+        }
+
+        else { //remaining possibility is that user has an unresolved accusation i.e. grudgeBook[accusationTracker[_user]].accuser is nonzero.  This must be resolved.
+            return false;
+        }
+    }
+
+    function resetAccusationTracker() public whenNotPaused returns(bool) { //return TRUE if accusation is reset i.e. match not found
+        if (grudgeBook[accusationTracker[msg.sender]].supporters.length == 0) {
+            accusationTracker[msg.sender] = address(0);
+            return true;
+        }
+        
+        for (uint i = 0; i < grudgeBook[accusationTracker[msg.sender]].supporters.length; i++) {
+            if (grudgeBook[accusationTracker[msg.sender]].supporters[i] == msg.sender) {
+                return false;
+            }            
+        }       
+
+        accusationTracker[msg.sender] = address(0);
+        return false;
+    }
+
+    function resetAccusationTracker(address _user) private whenNotPaused returns(bool) { //return TRUE if accusation is reset i.e. match not found
+        if (grudgeBook[accusationTracker[_user]].supporters.length == 0) {
+            accusationTracker[_user] = address(0);
+            return true;
+        }
+        
+        for (uint i = 0; i < grudgeBook[accusationTracker[_user]].supporters.length; i++) {
+            if (grudgeBook[accusationTracker[_user]].supporters[i] == _user) {
+                return false;
+            }            
+        }       
+
+        accusationTracker[_user] = address(0);
+        return false;
+    }
 
     function _authorizeUpgrade(address newImplementation)
         internal
