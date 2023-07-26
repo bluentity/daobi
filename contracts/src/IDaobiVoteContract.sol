@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.10;
 
-interface DaobiVoteContract { //version 2
+interface IDaobiVoteContract { //version 2
   function BURNER_ROLE (  ) external view returns ( bytes32 );
   function DEFAULT_ADMIN_ROLE (  ) external view returns ( bytes32 );
   function MINREQ_ROLE (  ) external view returns ( bytes32 );
