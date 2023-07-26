@@ -87,8 +87,8 @@ contract DaobiAccountability is Initializable, ERC721Upgradeable, ERC721URIStora
         responseDays = 3;
         staleDays = 1;
         cost = 1000 * 10 ** daobi.decimals();
-        minSupporters = 2;
-        maxSupporters = 32; 
+        minSupporters = 5;
+        maxSupporters = 30; 
 
         //for debugging purposes, assigned separately during deployment for automation
         //DAOvault = 0x26bA3fb6F4b0c3394A001b0b09961663b2087d51;
@@ -219,10 +219,8 @@ contract DaobiAccountability is Initializable, ERC721Upgradeable, ERC721URIStora
         uint256 tokenId = _tokenIdCounter.current();
         _tokenIdCounter.increment();
         _safeMint(_to, tokenId);
-        address chanc = 0x841eD3b78A8dae4Ee005a21Bd8ee1574823E28D6; //FOR TESTING ONLY
-        //_setTokenURI(tokenId,URIcontract.generateURI(_target, grudgeBook[_target].accuser, chanc, generateSupporterString(_target) ));
+        address chanc = daobi.chancellor();
         _setTokenURI(tokenId,URIcontract.generateURI(_target, grudgeBook[_target].accuser, chanc, uint16(grudgeBook[_target].supporters.length), generateSupporterString(_target) ));
-        //_setTokenURI(tokenId,URIcontract.generateURI(_target, grudgeBook[_target].accuser, daobi.chancellor()));
     }
 
     function generateSupporterString(address target) private view returns (string memory) { //create the list of supporters to display in metadata
