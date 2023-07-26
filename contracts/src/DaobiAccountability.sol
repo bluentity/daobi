@@ -59,8 +59,6 @@ contract DaobiAccountability is Initializable, ERC721Upgradeable, ERC721URIStora
     mapping (address => Accusation) public grudgeBook;
     mapping (address => address) public accusationTracker;
 
-
-
     bytes32[2] __gap;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -81,14 +79,14 @@ contract DaobiAccountability is Initializable, ERC721Upgradeable, ERC721URIStora
         _grantRole(MANAGER_ROLE, msg.sender);
         _grantRole(PAUSER_ROLE, msg.sender);
 
-        
-        handlingFee = 40;
+        //alchemy RPC wouldn't execute deployment command with these enabled
+        /*handlingFee = 40;
         idleDays = 7;
         responseDays = 3;
         staleDays = 1;
         cost = 1000 * 10 ** daobi.decimals();
         minSupporters = 5;
-        maxSupporters = 30; 
+        maxSupporters = 30; */
 
         //for debugging purposes, assigned separately during deployment for automation
         //DAOvault = 0x26bA3fb6F4b0c3394A001b0b09961663b2087d51;
@@ -337,7 +335,7 @@ contract DaobiAccountability is Initializable, ERC721Upgradeable, ERC721URIStora
         }
     }
 
-    function resetAccusationTracker() public whenNotPaused returns(bool) { //return TRUE if accusation is reset i.e. match not found
+    function selfResetAccusationTracker() public whenNotPaused returns(bool) { //return TRUE if accusation is reset i.e. match not found
         if (grudgeBook[accusationTracker[msg.sender]].supporters.length == 0) {
             accusationTracker[msg.sender] = address(0);
             return true;
