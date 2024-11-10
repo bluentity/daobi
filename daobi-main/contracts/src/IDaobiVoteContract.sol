@@ -1,0 +1,57 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.10;
+
+interface IDaobiVoteContract { //version 2
+  function BURNER_ROLE (  ) external view returns ( bytes32 );
+  function DEFAULT_ADMIN_ROLE (  ) external view returns ( bytes32 );
+  function MINREQ_ROLE (  ) external view returns ( bytes32 );
+  function MINTER_ROLE (  ) external view returns ( bytes32 );
+  function NFT_MANAGER (  ) external view returns ( bytes32 );
+  function PAUSER_ROLE (  ) external view returns ( bytes32 );
+  function UPGRADER_ROLE (  ) external view returns ( bytes32 );
+  function URIaddr (  ) external view returns ( string memory );
+  function VOTE_ADMIN_ROLE (  ) external view returns ( bytes32 );
+  function approve ( address to, uint256 tokenId ) external;
+  function assessVotes ( address _voter ) external view returns ( uint160 );
+  function balanceOf ( address owner ) external view returns ( uint256 );
+  function burn ( address _account ) external;
+  function checkStatus ( address _voter ) external view returns ( bool );
+  function getAlias ( address _voter ) external view returns ( bytes32 );
+  function getApproved ( uint256 tokenId ) external view returns ( address );
+  function getRoleAdmin ( bytes32 role ) external view returns ( bytes32 );
+  function getVoteDate ( address _voter ) external view returns ( uint32 );
+  function grantRole ( bytes32 role, address account ) external;
+  function hasRole ( bytes32 role, address account ) external view returns ( bool );
+  function initialize (  ) external;
+  function isApprovedForAll ( address owner, address operator ) external view returns ( bool );
+  function mint ( address to ) external;
+  function name (  ) external view returns ( string memory);
+  function ownerOf ( uint256 tokenId ) external view returns ( address );
+  function pause (  ) external;
+  function paused (  ) external view returns ( bool );
+  function propertyRequirement (  ) external view returns ( uint256 );
+  function proxiableUUID (  ) external view returns ( bytes32 );
+  function recluse (  ) external;
+  function refreshTokenURI (  ) external;
+  function register ( address _initialVote, bytes32 _name ) external;
+  function renounceRole ( bytes32 role, address account ) external;
+  function revokeRole ( bytes32 role, address account ) external;
+  function safeTransferFrom ( address from, address to, uint256 tokenId ) external;
+  function safeTransferFrom ( address from, address to, uint256 tokenId, bytes memory _data ) external;
+  function seeBallot ( address _voter ) external view returns ( address );
+  function selfImmolate (  ) external;
+  function setApprovalForAll ( address operator, bool approved ) external;
+  function setMinimumTokenReq ( uint256 _minDB ) external;
+  function setURI ( string memory newURI ) external;
+  function supportsInterface ( bytes4 interfaceId ) external view returns ( bool );
+  function symbol (  ) external view returns ( string memory);
+  function targetDaobi ( address _daobi ) external;
+  function tokenContract (  ) external view returns ( address );
+  function tokenURI ( uint256 tokenId ) external view returns ( string memory);
+  function transferFrom ( address from, address to, uint256 tokenId ) external;
+  function unpause (  ) external;
+  function upgradeTo ( address newImplementation ) external;
+  function upgradeToAndCall ( address newImplementation, bytes memory data ) external;
+  function vote ( address _voteFor ) external;
+  function voterRegistry ( address ) external view returns ( address votedFor, bool serving, uint160 votesAccrued, bytes32 courtName, uint32 voteDate, bytes19 blankGap );
+}

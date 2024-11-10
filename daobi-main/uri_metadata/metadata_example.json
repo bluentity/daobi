@@ -1,0 +1,11 @@
+{
+  "description": "The seal of a DAObi voter", 
+  "external_url": "https://daobi.netlify.app/", 
+  "image": "https://gateway.pinata.cloud/ipfs/QmVGebzevRFuBnT88zEBTkWDnwiy7FRsKt2xALh4BMvqpo", 
+  "name": "DAObi Voting Token",
+}
+
+https://api.opensea.io/asset/0x8e9e64C261401A3b2d088fC0FC5956cE46747373/529431064833332623482936429579459563089720005670/validate/ 
+
+mumbai daobi test contract: '0x75666404E5bBe0E971b792fECcCcFd56ab91B81d'
+vote contract: '0x8e9e64C261401A3b2d088fC0FC5956cE46747373'

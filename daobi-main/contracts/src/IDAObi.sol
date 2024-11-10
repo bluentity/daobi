@@ -1,0 +1,56 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.10;
+
+interface IDAObi {
+  function CHANCELLOR_ROLE (  ) external view returns ( bytes32 );
+  function DAOvault (  ) external view returns ( address );
+  function DEFAULT_ADMIN_ROLE (  ) external view returns ( bytes32 );
+  function PAUSER_ROLE (  ) external view returns ( bytes32 );
+  function TREASURER_ROLE (  ) external view returns ( bytes32 );
+  function UPGRADER_ROLE (  ) external view returns ( bytes32 );
+  function adjustSalaryAmount ( uint256 _newSalary ) external;
+  function adjustSalaryInterval ( uint256 _newInterval ) external;
+  function allowance ( address owner, address spender ) external view returns ( uint256 );
+  function approve ( address spender, uint256 amount ) external returns ( bool );
+  function balanceOf ( address account ) external view returns ( uint256 );
+  function burn ( uint256 amount ) external;
+  function burnFrom ( address account, uint256 amount ) external;
+  function chancellor (  ) external view returns ( address );
+  function chancellorSalary (  ) external view returns ( uint256 );
+  function claimChancellorSalary (  ) external;
+  function decimals (  ) external view returns ( uint8 );
+  function decreaseAllowance ( address spender, uint256 subtractedValue ) external returns ( bool );
+  function getRoleAdmin ( bytes32 role ) external view returns ( bytes32 );
+  function grantRole ( bytes32 role, address account ) external;
+  function hasRole ( bytes32 role, address account ) external view returns ( bool );
+  function increaseAllowance ( address spender, uint256 addedValue ) external returns ( bool );
+  function initialize (  ) external;
+  function lastSalaryClaim (  ) external view returns ( uint256 );
+  function makeClaim (  ) external;
+  function mint ( uint256 amount ) external;
+  function name (  ) external view returns ( string memory);
+  function pause (  ) external;
+  function paused (  ) external view returns ( bool );
+  function proxiableUUID (  ) external view returns ( bytes32 );
+  function recoverSeal (  ) external;
+  function renounceRole ( bytes32 role, address account ) external;
+  function retargetDAO ( address _newVault ) external;
+  function retargetSeal ( address _sealContract ) external;
+  function retargetVoting ( address _voteContract ) external;
+  function revokeRole ( bytes32 role, address account ) external;
+  function salaryInterval (  ) external view returns ( uint256 );
+  function sealContract (  ) external view returns ( address );
+  function setSwapFee ( uint24 _swapFee ) external;
+  function supportsInterface ( bytes4 interfaceId ) external view returns ( bool );
+  function swapFee (  ) external view returns ( uint24 );
+  function symbol (  ) external view returns ( string memory);
+  function totalSupply (  ) external view returns ( uint256 );
+  function transfer ( address to, uint256 amount ) external returns ( bool );
+  function transferFrom ( address from, address to, uint256 amount ) external returns ( bool );
+  function uniswapRouter (  ) external view returns ( address );
+  function unpause (  ) external;
+  function updateContract (  ) external;
+  function upgradeTo ( address newImplementation ) external;
+  function upgradeToAndCall ( address newImplementation, bytes memory data ) external;
+  function votingContract (  ) external view returns ( address );
+}
