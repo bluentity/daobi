@@ -9,7 +9,7 @@ cache
 *artifacts
 
 #may be added later
-scripts
+scriptTest
 test
 hardhat.config*
 .openzeppelin
