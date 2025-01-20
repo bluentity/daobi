@@ -73,7 +73,7 @@ async function main() {
         const tx1 = await daobi.retargetVoting(VOTE_CONTRACT_ADDRESS);
         await unpauseContract(daobi, "DAObi");
         console.log("Waiting for transaction to be mined...");
-        await tx1.wait(1); // Wait for 2 block confirmations
+        await tx1.wait(2); // Wait for 2 block confirmations
         console.log("Vote contract linked successfully - transaction mined");
 
         // Link DAObi and Seal
@@ -81,7 +81,7 @@ async function main() {
         const tx2 = await daobi.retargetSeal(SEAL_CONTRACT_ADDRESS);
         await unpauseContract(daobi, "DAObi");
         console.log("Waiting for transaction to be mined...");
-        await tx2.wait(1); // Wait for 2 block confirmations
+        await tx2.wait(2); // Wait for 2 block confirmations
         console.log("Seal contract linked successfully - transaction mined");
 
         // Link Vote and DAObi
@@ -125,7 +125,7 @@ async function main() {
         const tx9 = await dbacc.retargetVote(VOTE_CONTRACT_ADDRESS);
         const tx10 = await dbacc.retargetURIgen(ACCURI_CONTRACT_ADDRESS);
         const tx11 = await dbacc.retargetDAObi(DAOBI_CONTRACT_ADDRESS);
-        const tx12 = await dbacc.adjust(5, 30, 40, 1000 * 10 ** 18, 7, 3, 1); //adjust(uint16 _min, uint16 _max, uint8 _fee, uint256 _cost, uint8 _idle, uint8 _response, uint8 _stale), also see line 82 of Accountability contract
+        const tx12 = await dbacc.adjust(5, 30, 40, ethers.parseEther("1000"), 7, 3, 1); //adjust(uint16 _min, uint16 _max, uint8 _fee, uint256 _cost, uint8 _idle, uint8 _response, uint8 _stale), also see line 82 of Accountability contract
         console.log("Waiting for transaction to be mined...");
         await tx12.wait(1) //wait for 2 block confirmations
         console.log("Accountabiliyt Contact Configured - transaction mined")
