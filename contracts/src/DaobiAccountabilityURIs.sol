@@ -191,7 +191,7 @@ contract DaobiAccountabilityURIs is Initializable, AccessControlUpgradeable, UUP
             abi.encodePacked(
                 '{',
                     '"name": "The Banishing of ', StringsUpgradeable.toHexString(_target), '",', 
-                    '"description": "Commemorates the banishment of', StringsUpgradeable.toHexString(_target), 'for excessive idleness",',
+                    '"description": "Commemorates the banishment of ', StringsUpgradeable.toHexString(_target), ' for excessive idleness",',
                     '"image": "', generateSVG(_target, _accuser, _chancellor, _numSupporters), '",',
                     '"external_url": "https://www.daobi.org/",'
             ),

@@ -244,7 +244,7 @@ contract DaobiVoteContract is Initializable, ERC721Upgradeable, ERC721URIStorage
     function supportsInterface(bytes4 interfaceId)
         public
         view
-        override(ERC721Upgradeable, AccessControlUpgradeable)
+        override(ERC721Upgradeable, AccessControlUpgradeable, ERC721URIStorageUpgradeable)
         returns (bool)
     {
         return super.supportsInterface(interfaceId);

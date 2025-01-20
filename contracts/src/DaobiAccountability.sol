@@ -183,7 +183,8 @@ contract DaobiAccountability is Initializable, ERC721Upgradeable, ERC721URIStora
         require(grudgeBook[_target].accuser == msg.sender, "DaobiAccountability: Only the ringleader can petition to have someone banished!");
         require(dbvote.balanceOf(msg.sender) > 0, "DaobiAccountability: You don't have a vote token!");
         require(grudgeBook[_target].supporters.length >= minSupporters, "DaobiAccountability: You haven't gathered enough backers!");
-        require(dbvote.getVoteDate(_target) < (grudgeBook[_target].accusationTime + (responseDays * DAY_IN_SECONDS)), "DaobiAccountability: Target has not met idleness criteria!");
+        //require(dbvote.getVoteDate(_target) < (grudgeBook[_target].accusationTime + (responseDays * DAY_IN_SECONDS)), "DaobiAccountability: Target has not met idleness criteria!");
+        require(block.timestamp > grudgeBook[_target].accusationTime + (responseDays * DAY_IN_SECONDS), "DaobiAccountability: Target has not met idleness criteria!");
 
         //check whether the target has pre-emptively burned his token.  If he hasn't, his token is burned and the accuser gets his money back sans a handling fee.
         if (dbvote.balanceOf(_target) > 0) { 
@@ -401,7 +402,7 @@ contract DaobiAccountability is Initializable, ERC721Upgradeable, ERC721URIStora
     function supportsInterface(bytes4 interfaceId)
         public
         view
-        override(ERC721Upgradeable, ERC721EnumerableUpgradeable, AccessControlUpgradeable)
+        override(ERC721Upgradeable, ERC721EnumerableUpgradeable, AccessControlUpgradeable, ERC721URIStorageUpgradeable)
         returns (bool)
     {
         return super.supportsInterface(interfaceId);
