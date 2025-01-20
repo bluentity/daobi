@@ -23,3 +23,9 @@ contracts/UniswapV3Factory.sol
 contracts/NoDelegateCall.sol
 contracts/UniswapV3Pool.sol
 contracts/UniswapV3PoolDeployer.sol
+
+#old file hierarchy
+contracts/DAObiContract2.sol
+contracts/DAObiContract3.sol
+contracts/DaobiChancellorsSeal.sol
+contracts/DaobiVoteContract.sol
