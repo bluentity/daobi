@@ -3,6 +3,7 @@ node_modules
 coverage
 coverage.json
 typechain-types
+.vs
 
 #Hardhat files
 cache
@@ -29,3 +30,10 @@ contracts/DAObiContract3.sol
 contracts/DaobiChancellorsSeal.sol
 contracts/DaobiVoteContract.sol
 contracts/completed
+
+#developer scratch files
+scratch/
+tenderly_1.5.12/
+/tenderly_1.5.12
+/contracts/working
+DeploymentLog_amoy.txt
