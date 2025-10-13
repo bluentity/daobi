@@ -37,3 +37,5 @@ tenderly_1.5.12/
 /tenderly_1.5.12
 /contracts/working
 DeploymentLog_amoy.txt
+uri_metadata/cursedcoin_meta.json
+contracts/src/DaobiVoteContractIntermed.sol
