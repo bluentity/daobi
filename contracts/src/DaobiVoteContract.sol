@@ -52,7 +52,7 @@ contract DaobiVoteContract is Initializable, ERC721Upgradeable, ERC721URIStorage
 
     uint256 public propertyRequirement; //minimum number of tokens that must be held to vote.
     address payable public tokenContract;
-    DAObi daobi;
+    DAObiContract3 daobi;
 
     bytes32 public constant VOTE_ADMIN_ROLE = keccak256("VOTE_ADMIN_ROLE");
     bytes32 public constant MINREQ_ROLE = keccak256("MINREQ_ROLE");
@@ -109,7 +109,7 @@ contract DaobiVoteContract is Initializable, ERC721Upgradeable, ERC721URIStorage
 
     function targetDaobi(address payable _daobi) public onlyRole(VOTE_ADMIN_ROLE) {
         tokenContract = _daobi;
-        daobi = DAObi(_daobi);
+        daobi = DAObiContract3(_daobi);
     }
 
     function setMinimumTokenReq(uint256 _minDB) public onlyRole(MINREQ_ROLE) {

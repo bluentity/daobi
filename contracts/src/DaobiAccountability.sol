@@ -12,9 +12,9 @@ import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/Base64Upgradeable.sol";
 
-import "./IDaobiVoteContract.sol";
-import "./IDAObi.sol";
-import "./IDaobiAccountabilityURIs.sol";
+import "./interfaces/IDaobiVoteContract.sol";
+import "./interfaces/IDAObi.sol";
+import "./interfaces/IDaobiAccountabilityURIs.sol";
 
 contract DaobiAccountability is Initializable, ERC721Upgradeable, ERC721URIStorageUpgradeable, ERC721EnumerableUpgradeable, PausableUpgradeable, AccessControlUpgradeable, UUPSUpgradeable {
     using CountersUpgradeable for CountersUpgradeable.Counter;
